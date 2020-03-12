@@ -1311,6 +1311,14 @@ C++ 程序员应当熟知标准库的基本知识，并在适当的时候加以�
 
 哪个可能会修改 `data` 呢？
 
+**警告**: 全局对象的初始化并不是完全有序的。
+当使用全局对象时，应当用常量为之初始化。
+还要注意，即便对于 `const` 对象，也可能发生未定义的初始化顺序。
+
+##### 例外
+
+全局对象通常优于单例。
+
 ##### 注解
 
 全局常量是有益的。
@@ -1325,6 +1333,9 @@ C++ 程序员应当熟知标准库的基本知识，并在适当的时候加以�
 **警告**: 请关注数据竞争：当一个线程能够访问非局部数据（或以引用传递的数据），而另一个线程执行被调用的函数时，就可能带来数据竞争。
 指向可变数据的每个指针或引用都是潜在的数据竞争。
 
+使用全局指针或引用来访问和修改非 const 且非局部的数据，并非是比非 const 全局变量更好的替代方案，
+这是因为它并不能解决隐藏依赖性或潜在竞争条件的问题。
+
 ##### 注解
 
 不可变数据是不会带来数据竞争条件的。
@@ -1337,7 +1348,8 @@ C++ 程序员应当熟知标准库的基本知识，并在适当的时候加以�
 
 ##### 强制实施
 
-【简单】 报告所有在命名空间作用域中声明的非 `const` 变量。
+【简单】 报告所有在命名空间作用域中声明的非 `const` 变量和全局的指向非 const 数据的指针/引用。
+
 
 ### <a name="Ri-singleton"></a>I.3: 避免使用单例
 
@@ -2215,7 +2227,7 @@ GCC 6.1 及其后版本支持概念。
         void draw(); // 公开 API 转发给实现
         widget(int); // 定义于实现文件中
         ~widget();   // 定义于实现文件中，其中 impl 将为完整类型
-        widget(widget&&) = default;
+        widget(widget&&); // 定义于实现文件中
         widget(const widget&) = delete;
         widget& operator=(widget&&); // 定义于实现文件中
         widget& operator=(const widget&) = delete;
@@ -2232,6 +2244,7 @@ GCC 6.1 及其后版本支持概念。
     };
     void widget::draw() { pimpl->draw(*this); }
     widget::widget(int n) : pimpl{std::make_unique<impl>(n)} {}
+    widget::widget(widget&&) = default;
     widget::~widget() = default;
     widget& widget::operator=(widget&&) = default;
 
@@ -4691,7 +4704,7 @@ C++ 的内建类型都是正规的，标准库中的类，如 `string`，`vector
         };
         shared_ptr<Impl> p;
     public:
-        Silly(const Silly& a) : p{a.p} { *p = *a.p; }   // 深复制
+        Silly(const Silly& a) : p{make_shared<Impl>()} { *p = *a.p; }   // 深复制
         Silly& operator=(const Silly& a) { p = a.p; }   // 浅复制
         // ...
     };
@@ -8811,13 +8824,13 @@ C++17 引入了一个独立类型 `std::byte` 以支持在原始对象表示上�
     void Print_color(int color);
 
     enum Web_color { red = 0xFF0000, green = 0x00FF00, blue = 0x0000FF };
-    enum Product_info { Red = 0, Purple = 1, Blue = 2 };
+    enum Product_info { red = 0, purple = 1, blue = 2 };
 
     Web_color webby = Web_color::blue;
 
     // 显然至少有一个调用是有问题的。
     Print_color(webby);
-    Print_color(Product_info::Blue);
+    Print_color(Product_info::blue);
 
 代之以 `enum class`：
 
@@ -8828,7 +8841,7 @@ C++17 引入了一个独立类型 `std::byte` 以支持在原始对象表示上�
 
     Web_color webby = Web_color::blue;
     Print_color(webby);  // 错误: 无法转换 Web_color 为 int。
-    Print_color(Product_info::Red);  // 错误: 无法转换 Product_info 为 int。
+    Print_color(Product_info::red);  // 错误: 无法转换 Product_info 为 int。
 
 ##### 强制实施
 
@@ -9286,26 +9299,7 @@ C 风格的字符串是以单个指向以零结尾的字符序列的指针来传
 
 ### <a name="Rr-global"></a>R.6: 避免非 `const` 的全局变量
 
-##### 理由
-
-全局变量是可以在任何地方访问的，因此它们可能会导致在貌似无关的对象之间出现预期之外的依赖关系。
-这是一种可观的错误来源。
-
-**警告**: 全局对象的初始化并不是完全有序的。
-当使用全局对象时，应当用常量为之初始化。
-还要注意，即便对于 `const` 对象，也可能发生未定义的初始化顺序。
-
-##### 例外
-
-全局对象通常优于单例。
-
-##### 例外
-
-不可变（`const`）的全局对象并不会引入那些我们试图通过禁止全局对象来避免的问题。
-
-##### 强制实施
-
-(??? NM: 显然可以对非 `const` 的静态对象给出警告……要不要这样做呢？)
+参见 [I.2](#Ri-global)
 
 ## <a name="SS-alloc"></a>R.alloc: 分配与回收
 
@@ -11789,7 +11783,7 @@ C 风格的强制转换很危险，因为它可以进行任何种类的转换，
 ##### 理由
 
 这是在 `const` 上说谎。
-若变量确实声明为 `const`，则“强制掉 `const`”是未定义的行为。
+若变量确实声明为 `const`，修改它将导致未定义的行为。
 
 ##### 示例，不好
 
@@ -12317,7 +12311,7 @@ C 风格的强制转换很危险，因为它可以进行任何种类的转换，
 
 本条规则是显然并且广为知晓的语言规则，但其可能难于遵守。
 这需要良好的编码风格，程序库支持，以及静态分析来消除违反情况而不耗费大量开销。
-这正是[C++'s resource- and type-safety model](#Stroustrup15)中所讨论的主要部分。
+这正是 [C++ 的类型和资源安全性模型](#Stroustrup15)中所讨论的主要部分。
 
 **参见**：
 
@@ -12705,17 +12699,62 @@ C 风格的强制转换很危险，因为它可以进行任何种类的转换，
 
 ##### 示例
 
-    ???
+    switch(x){
+    case 1 :
+        while(/* 某种条件 */){
+            //...
+        break;
+        } //噢！打算 break switch 还是 break while？
+    case 2 :
+        //...
+        break;
+    }
 
 ##### 替代方案
 
 通常，需要 `break` 的循环都是作为一个函数（算法）的良好候选者，其 `break` 将会变为 `return`。
 
-    ???
+    // 原始代码：break 内部循环
+    void use1(){
+        std::vector<T> vec = {/* 初始化为一些值 */};
+        T value;
+        for(const T item : vec){
+            if(/* 某种条件 */){
+                value = item;
+                break;
+            }
+        }
+        /* 然后对 value 做些事 */
+    }
+
+    // 这样更好：创建一个函数使其从循环中返回
+    T search(const std::vector<T> &vec){
+        for(const T &item : vec){
+            if(/* 某种条件 */) return item;
+        }
+        return T(); // 默认值
+    }
+
+    void use2(){
+        std::vector<T> vec = {/* 初始化为一些值 */};
+        T value = search(vec);
+        /* 然后对 value 做些事 */
+    }
 
 通常，使用 `continue` 的循环都可以等价且同样简洁地用 `if` 语句来表达。
 
-    ???
+    for(int item : vec){ // 不好
+        if(item%2 == 0) continue;
+        if(item == 5) continue;
+        if(item > 10) continue;
+        /* 对 item 做些事 */
+    }
+
+    for(int item : vec){ // 好
+        if(item%2 != 0 && item != 5 && item <= 10){
+            /* 对 item 做些事 */
+        }
+    }
 
 ##### 注解
 
@@ -14928,7 +14967,28 @@ C++ 对此的机制是 `atomic` 类型：
 
 ##### 示例
 
-    ???
+    int read_value(const std::string& filename)
+    {
+        std::ifstream in(filename);
+        in.exceptions(std::ifstream::failbit);
+        int value;
+        in >> value;
+        return value;
+    }
+
+    void async_example()
+    {
+        try
+        {
+            auto v1 = std::async(std::launch::async, read_value, "v1.txt"); 
+            auto v2 = std::async(std::launch::async, read_value, "v2.txt");
+            std::cout << v1.get() + v2.get() << '\n';
+        }
+        catch (std::ios_base::failure & fail) 
+        {
+            // 此处处理异常
+        }
+    }
 
 ##### 注解
 
@@ -15521,7 +15581,7 @@ RAII（Resource Acquisition Is Initialization，资源获取即初始化）是�
 显然这样做增加了代码大小，不允许隐式的“异常”（`valid()` 检查）传播，而且 `valid()` 检查可能被忘掉。
 优先采用异常。
 
-**参见**: [`noexcept` 的用法](#Se-noexcept)
+**参见**: [`noexcept` 的用法](#Re-noexcept)
 
 ##### 强制实施
 
@@ -18688,6 +18748,7 @@ C++ 比 C 的表达能力更强，而且为许多种类的编程都提供了更�
 * [SF.9: 避免源文件的循环依赖](#Rs-cycles)
 * [SF.10: 避免依赖于隐含地 `#include` 进来的名字](#Rs-implicit)
 * [SF.11: 头文件应当是自包含的](#Rs-contained)
+* [SF.12: 如果可以就优先采用角括号形式的 `#include`，其他情况下采用引号模式](#Rs-incform)
 
 * [SF.20: 用 `namespace` 表示逻辑结构](#Rs-namespace)
 * [SF.21: 请勿在头文件中使用无名（匿名）命名空间](#Rs-unnamed)
@@ -19124,6 +19185,33 @@ C++ 比 C 的表达能力更强，而且为许多种类的编程都提供了更�
 ##### 强制实施
 
 以一项测试来验证头文件自身可通过编译，或者一个仅包含了该头文件的 cpp 文件可通过编译。
+
+### <a name="Rs-incform"></a>SF.12: 如果可以就优先采用角括号形式的 `#include`，其他情况下采用引号模式
+
+##### 理由
+
+[标准](http://eel.is/c++draft/cpp.include) 向编译器提供了对于实现
+使用角括号（`<>`）或引号（`""`）语法的 `#include` 的两种形式的灵活性。
+各厂商利用了这点并采用了不同的搜索算法和指定包含路径的方法。
+
+无论如何，指导方针是尽可能使用角括号形式。这点支持了标准程序库
+头文件必须以此中方式包含的事实，这样做更可能产生可移植代码，
+并允许其他情况下使用引号形式。例如明确头文件相对于包含它的文件的局部性，
+或当需要某种不同的搜索算法的情形。
+
+##### 示例
+
+    #include <string>       // 来自标准程序库，规定形式
+    #include "helpers.h"    // 项目特定的文件，使用 "" 形式
+
+##### 注解
+不遵守这条可能会导致很难诊断的错误：由于包含时指定的错误的范围而选择了错误的文件。
+
+程序库作者们应当把它们的头文件放到一个文件夹中，然后让其客户使用相对路径来包含这些文件：`#include <some_library/common.h>`。
+
+##### 强制实施
+
+检测可以按 `<>` 引用却按 `""` 引用的头文件。
 
 ### <a name="Rs-namespace"></a>SF.20: 用 `namespace` 表示逻辑结构
 
@@ -20356,6 +20444,7 @@ C 标准库规则概览：
 
 ## <a name="SS-rules"></a>RF.rules: 编码规则
 
+* [AUTOSAR Guidelines for the use of the C++14 language in critical and safety-related systems v17.10](https://www.autosar.org/fileadmin/user_upload/standards/adaptive/17-10/AUTOSAR_RS_CPP14Guidelines.pdf)
 * [Boost Library Requirements and Guidelines](http://www.boost.org/development/requirements.html).
   ???.
 * [Bloomberg: BDE C++ Coding](https://github.com/bloomberg/bde/wiki/CodingStandards.pdf).
@@ -20375,6 +20464,7 @@ C 标准库规则概览：
   所使用的程序库必须是已被证明可以用于关键任务应用的。
   它和这个指导方针集合的相似性并不让人惊讶，因为 Bjarne Stroustrup 正是 JSF++ 的作者之一。
   建议采纳，但请注意其非常特定的关注领域。
+* [_MISRA C++ 2008: Guidelines for the use of the C++ language in critical systems_] (https://www.misra.org.uk/Buyonline/tabid/58/Default.aspx)。
 * [Mozilla Portability Guide](https://developer.mozilla.org/en-US/docs/Mozilla/C%2B%2B_Portability_Guide).
   如其名称所示，它关注于跨许多（老）编译器的兼容性。
   因此，它是很具有限制性的。
@@ -20387,7 +20477,7 @@ C 标准库规则概览：
   它们的许多规则都广泛适用。
 * [High Integrity C++ Coding Standard](http://www.codingstandard.com/).
 * [llvm](http://llvm.org/docs/CodingStandards.html).
-  有些简略，前 C++11 时代的，而且是（有理由地）针对其应用领域的。
+  有些简略，基于 C++14，而且是（有理由地）针对其应用领域的。
 * ???
 
 ## <a name="SS-books"></a>RF.books: 带有编码指导方针的书籍
@@ -20653,8 +20743,12 @@ GSL 只有头文件，可以在 [GSL: 指导方针支持库](https://github.com/
 支持库中的设施被设计为极为轻量化（零开销），它们相比于传统方案并不会带来任何开销。
 当需要时，它们还可以用其他功能“工具化”（比如一些检查）来帮助进行诸如调试等任务。
 
-这里的指导方针假定有一个 `variant` 类型。
+各指导方针中，除了使用 GSL 中的类型之外，还使用了标准程序库（如 C++17）中的类型。
+例如，我们假定有一个 `variant` 类型，但它当前尚未在 GSL 中。
 最终，请使用[通过表决进入 C++17 的版本](http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2016/p0088r3.html)。
+
+由于诸如当前 C++ 版本的限制等技术原因，您所使用的程序库中可能不支持下面列出的某些 GSL 类型可能未受支持。
+请查阅您的 GSL 文档以获得更多信息。
 
 GSL 组件概览：
 
