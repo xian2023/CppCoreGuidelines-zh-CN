@@ -2837,11 +2837,11 @@ C++ 标准库隐含地对 C 标准库中的所有函数做了这件事。
 
 一般性参数传递：
 
-![一般性参数传递表](./param-passing-normal.png "一般性参数传递")
+![一般性参数传递表](./images/param-passing-normal.png "一般性参数传递")
 
 高级参数传递：
 
-![高级参数传递表](./param-passing-advanced.png "高级参数传递")
+![高级参数传递表](./images/param-passing-advanced.png "高级参数传递")
 
 只有在进行论证必要之后再使用高级技巧，并将其必要性注明在代码注释中。
 

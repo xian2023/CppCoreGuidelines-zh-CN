@@ -1,4 +1,4 @@
-#[C++ 核心指南](http://isocpp.github.io/CppCoreGuidelines)
+# [C++ 核心指南](http://isocpp.github.io/CppCoreGuidelines)
 
 >"Within C++ is a smaller, simpler, safer language struggling to get out."
 >-- <cite>Bjarne Stroustrup</cite>
