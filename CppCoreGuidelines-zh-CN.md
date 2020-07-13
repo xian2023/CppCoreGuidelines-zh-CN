@@ -1,6 +1,6 @@
 # <a name="main"></a>C++ 核心指导方针
 
-2019/12/8
+2020/7/3
 
 
 编辑：
@@ -356,7 +356,7 @@
 每条规则都包括一个**强制实施**小节，列出了进行强制实施的一些建议。
 所谓强制实施，可以是通过代码评审，通过静态分析，通过编译器，或者通过运行时检查来进行的。
 只要可行，我们都倾向于“机械性的”检查（人类是缓慢的，不精确的，而且很容易疲倦）和静态检查。
-只有当不存在其他方案时，我们才偶尔建议进行运行时检查；我们并不想带来所谓“分散肥肉”。
+只有当不存在其他方案时，我们才偶尔建议进行运行时检查；我们并不想带来所谓“分布式代码爆炸”。
 如果适当的话，我们会（在**强制实施**小节中）将规则标以相关的规则组的名字（所谓“剖面配置”）。
 一条规则可以属于多个剖面配置，也可以不属于任何剖面配置。
 首先，我们有一些对应于常规需求（期望、理想目标）的剖面配置：
@@ -918,7 +918,7 @@ C++ 程序员应当熟知标准库的基本知识，并在适当的时候加以�
 ##### 示例
 
 过量的检查可能是代价昂贵的。
-有些情况下提早检查可能是愚蠢的，因为你可能根本不需要这个值，或者可能仅需要值的一部分，而这要比进行整体的检查容易得多。同样来说，不要添加能够改变接口的渐进式行为的验证性检查（例如，不要在平均复杂度为 `O(1)` 的接口中添加一个 `O(n)` 的检查）。
+有些情况下提早检查可能会很低效，因为你可能根本不需要这个值，或者可能仅需要值的一部分，而这要比进行整体的检查容易得多。同样来说，不要添加能够改变接口的渐进式行为的验证性检查（例如，不要在平均复杂度为 `O(1)` 的接口中添加一个 `O(n)` 的检查）。
 
     class Jet {    // 物理规则是: e * e < x * x + y * y + z * z
         float x;
@@ -1280,7 +1280,7 @@ C++ 程序员应当熟知标准库的基本知识，并在适当的时候加以�
 注意，非 `const` 的成员函数会通过对象的状态来向其他成员函数传递信息。
 
 **其他形式**: 接口应当是函数或者一组函数集合。
-函数可以是模板函数，而函数集合可以是类或者类模板。
+函数可以是函数模板，而函数集合可以是类或者类模板。
 
 ##### 强制实施
 
@@ -1750,7 +1750,7 @@ C++ 程序员应当熟知标准库的基本知识，并在适当的时候加以�
 
 ##### 示例
 
-使用 ISO Concepts TS 风格的必要条件说明。例如：
+使用 C++20 风格的必要条件说明。例如：
 
     template<typename Iter, typename Val>
     // requires InputIterator<Iter> && EqualityComparable<ValueType<Iter>>, Val>
@@ -1761,7 +1761,7 @@ C++ 程序员应当熟知标准库的基本知识，并在适当的时候加以�
 
 ##### 注解
 
-很快（可能是 2018 年），大多数编译器就有能力检查删除了 `//` 之后的 `requires` 子句了。
+很快（C++20），所有编译器就都有能力检查删除了 `//` 之后的 `requires` 子句了。
 GCC 6.1 及其后版本支持概念。
 
 **参见**: [泛型编程](#SS-GP)和[概念](#SS-concepts)。
@@ -1781,7 +1781,7 @@ GCC 6.1 及其后版本支持概念。
 
     int printf(const char* ...);    // 不好: 当输出失败时返回负值
 
-    template <class F, class ...Args>
+    template<class F, class ...Args>
     // 好: 当无法启动一个新的线程时抛出 system_error
     explicit thread(F&& f, Args&&... args);
 
@@ -1826,7 +1826,7 @@ GCC 6.1 及其后版本支持概念。
 
 * 通常，显式的错误检查和处理会消耗掉和异常处理一样多的时间和空间。
 * 通常，使用异常的更清晰的代码会带来更好的性能（简化了对程序执行路径的追踪和其优化）。
-* 一条对性能关键代码的好规则是，把检查从代码的关键部分中移出去（[检查](#Rper-checking)）。
+* 一条对性能关键代码的好规则是，把检查从代码的[关键](#Rper-critical)部分中移出去。
 * 长期来看，更规整的代码会得到更好的优化。
 * 在做出性能相关的声明前一定要小心地[进行测量](#Rper-measure)。
 
@@ -1985,7 +1985,7 @@ GCC 6.1 及其后版本支持概念。
 ##### 例外
 
 使用 `zstring` 和 `czstring` 来表示 C 风格的以零终结字符串。
-但这样做时，应当使用 `std::string_view` 或 [GSL](#GSL) 中的 `string_span` 以避免范围错误。
+但这样做时，应当使用 `std::string_view` 或 [GSL](#S-gsl) 中的 `string_span` 以避免范围错误。
 
 ##### 强制实施
 
@@ -2302,8 +2302,8 @@ GCC 6.1 及其后版本支持概念。
     public:
         enum Opt { from_line = 1 };
         Istream() { }
-        Istream(zstring p) :owned{true}, inp{new ifstream{p}} {}            // 从文件读取
-        Istream(zstring p, Opt) :owned{true}, inp{new istringstream{p}} {}  // 从命令行读取
+        Istream(zstring p) : owned{true}, inp{new ifstream{p}} {}            // 从文件读取
+        Istream(zstring p, Opt) : owned{true}, inp{new istringstream{p}} {}  // 从命令行读取
         ~Istream() { if (owned) delete inp; }
         operator istream& () { return *inp; }
     private:
@@ -2666,7 +2666,7 @@ GCC 6.1 及其后版本支持概念。
 
 ##### 例外
 
-模板函数（包括模板成员函数）一般都定义于头文件中，因此是内联的。
+函数模板（包括类模板的成员函数 `A<T>::function()` 和成员函数模板 `A::function<T>()`）一般都定义于头文件中，因此是内联的。
 
 ##### 强制实施
 
@@ -2961,7 +2961,8 @@ C++ 标准库隐含地对 C 标准库中的所有函数做了这件事。
 
 ##### 示例
 
-    void sink(vector<int>&& v) {   // 无论参数所拥有的是什么，sink 都获得了其所有权
+    void sink(vector<int>&& v)  // 无论参数所拥有的是什么，sink 都获得了其所有权
+    {
         // 通常这里可能有对 v 的 const 访问
         store_somewhere(std::move(v));
         // 通常这里不再会使用 v 了；它已经被移走
@@ -2977,8 +2978,9 @@ C++ 标准库隐含地对 C 标准库中的所有函数做了这件事。
 
 例如：
 
-    template <class T>
-    void sink(std::unique_ptr<T> p) {
+    template<class T>
+    void sink(std::unique_ptr<T> p)
+    {
         // 使用 p ... 可能在之后的什么地方 std::move(p)
     }   // p 被销毁
 
@@ -2998,8 +3000,9 @@ C++ 标准库隐含地对 C 标准库中的所有函数做了这件事。
 
 ##### 示例
 
-    template <class F, class... Args>
-    inline auto invoke(F f, Args&&... args) {
+    template<class F, class... Args>
+    inline auto invoke(F f, Args&&... args)
+    {
         return f(forward<Args>(args)...);
     }
 
@@ -3076,8 +3079,7 @@ C++ 标准库隐含地对 C 标准库中的所有函数做了这件事。
 ##### 理由
 
 返回值是自我说明为“仅输出”值的。
-注意，C++ 是支持多返回值的，按约定使用的是 `tuple`（包括 `pair`），
-并可以在调用点使用 `tie` 以带来更多的便利。
+注意，C++ 是支持多返回值的，按约定使用的是 `tuple`（包括 `pair`），并可以在调用点使用 `tie` 或结构化绑定（C++17）以带来更多的便利。
 优先使用具名的结构体，使其返回值具有语义。不过，没有名字的 `tuple` 在泛型代码中则很有用。
 
 ##### 示例
@@ -3138,7 +3140,7 @@ C++98 的标准库已经使用这种风格了，因为 `pair` 就像一种两个
 
 比较一下，如果所有的值都按返回值传递出来的话，得像如下这样做：
 
-    pair<istream&, string> get_string(istream& is);  // 不建议这样做
+    pair<istream&, string> get_string(istream& is)  // 不建议这样做
     {
         string s;
         is >> s;
@@ -3725,7 +3727,8 @@ C 风格的字符串非常普遍。它们是按一种约定方式定义的：就
     {
      public:
         ...
-        Foo& operator=(const Foo& rhs) {
+        Foo& operator=(const Foo& rhs)
+        {
           // 复制各个成员。
           ...
           return *this;
@@ -3782,7 +3785,7 @@ C 风格的字符串非常普遍。它们是按一种约定方式定义的：就
     // 语句或者表达式作用域中 -- lambda 更自然
     vector<work> v = lots_of_work();
     for (int tasknum = 0; tasknum < max; ++tasknum) {
-        pool.run([=, &v]{
+        pool.run([=, &v] {
             /*
             ...
             ... 处理 v 的 1 / max, 即第 tasknum 个部分
@@ -3798,7 +3801,7 @@ C 风格的字符串非常普遍。它们是按一种约定方式定义的：就
 
 ##### 强制实施
 
-* 有名字的非泛型 lambda（比如 `auto x = [](int i){ /*...*/; };`），而其并未发生俘获并且出现于全局作用域，对它们给出警告。代之以编写常规的函数。
+* 有名字的非泛型 lambda（比如 `auto x = [](int i) { /*...*/; };`），而其并未发生俘获并且出现于全局作用域，对它们给出警告。代之以编写常规的函数。
 
 ### <a name="Rf-default-args"></a>F.51: 如果需要作出选择，采用默认实参应当优先于进行重载
 
@@ -3866,9 +3869,9 @@ C 风格的字符串非常普遍。它们是按一种约定方式定义的：就
 
     void send_packets(buffers& bufs)
     {
-        stage encryptor([] (buffer& b){ encrypt(b); });
-        stage compressor([&](buffer& b){ compress(b); encryptor.process(b); });
-        stage decorator([&](buffer& b){ decorate(b); compressor.process(b); });
+        stage encryptor([](buffer& b) { encrypt(b); });
+        stage compressor([&](buffer& b) { compress(b); encryptor.process(b); });
+        stage decorator([&](buffer& b) { decorate(b); compressor.process(b); });
         for (auto& b : bufs) { decorator.process(b); }
     }  // 自动阻塞以等待管线完成
 
@@ -3890,7 +3893,7 @@ C 风格的字符串非常普遍。它们是按一种约定方式定义的：就
     // 注意，当程序离开作用域时，
     // 局部对象不再存在，因此
     // process() 的调用将带有未定义行为！
-    thread_pool.queue_work([&]{ process(local); });
+    thread_pool.queue_work([&] { process(local); });
 
 ##### 示例，好
 
@@ -3898,7 +3901,7 @@ C 风格的字符串非常普遍。它们是按一种约定方式定义的：就
     // 需要局部对象的副本。
     // 由于为局部变量建立了副本，它将在
     // 函数调用的全部时间内可用。
-    thread_pool.queue_work([=]{ process(local); });
+    thread_pool.queue_work([=] { process(local); });
 
 ##### 强制实施
 
@@ -3917,11 +3920,12 @@ C 风格的字符串非常普遍。它们是按一种约定方式定义的：就
         int x = 0;
         // ...
 
-        void f() {
+        void f()
+        {
             int i = 0;
             // ...
 
-            auto lambda = [=]{ use(i, x); };   // 不好: “貌似”按复制/按值俘获
+            auto lambda = [=] { use(i, x); };   // 不好: “貌似”按复制/按值俘获
             // [&] 在当前的语言规则下的语义是一样的，也会复制 this 指针
             // [=,this] 和 [&,this] 也没好多少，并且也会导致混淆
 
@@ -3932,7 +3936,7 @@ C 风格的字符串非常普遍。它们是按一种约定方式定义的：就
 
             // ...
 
-            auto lambda2 = [i, this]{ use(i, x); }; // ok, 最明确并且最不混淆
+            auto lambda2 = [i, this] { use(i, x); }; // ok, 最明确并且最不混淆
 
             // ...
         }
@@ -3956,7 +3960,8 @@ C 风格的字符串非常普遍。它们是按一种约定方式定义的：就
 
 ##### 示例
 
-    int sum(...) {
+    int sum(...)
+    {
         // ...
         while (/*...*/)
             result += va_arg(list, int); // 不好，假定所传递的是 int
@@ -3967,7 +3972,8 @@ C 风格的字符串非常普遍。它们是按一种约定方式定义的：就
     sum(3.14159, 2.71828); // 不好，未定义的行为
 
     template<class ...Args>
-    auto sum(Args... args) { // 好，而且更灵活
+    auto sum(Args... args) // 好，而且更灵活
+    {
         return (... + args); // 注意：C++17 的“折叠表达式”
     }
 
@@ -4120,7 +4126,7 @@ C 风格的字符串非常普遍。它们是按一种约定方式定义的：就
 ##### 注解
 
 使用这样的类来表示接口和实现之间的区别当然不是唯一可能的方式。
-比如说，我们也可以使用命名空间中的一组自由函数，一个抽象基类，或者一个带有概念的模板函数来表示一个接口。
+比如说，我们也可以使用命名空间中的一组自由函数，一个抽象基类，或者一个带有概念的函数模板来表示一个接口。
 最重要的一点，在于明确地把接口和其实现“细节”区分开来。
 理想地，并且典型地，接口要比其实现稳定得多。
 
@@ -4167,7 +4173,7 @@ C 风格的字符串非常普遍。它们是按一种约定方式定义的：就
 
     class Foobar {
     public:
-        void foo(long x)    { /* 操作 private 数据 */ }
+        void foo(long x) { /* 操作 private 数据 */ }
         void foo(double x) { foo(std::lround(x)); }
         // ...
     private:
@@ -4487,7 +4493,7 @@ C++ 的内建类型都是正规的，标准库中的类，如 `string`，`vector
 默认操作的规则集合：
 
 * [C.20: 只要可能，请避免定义任何的默认操作](#Rc-zero)
-* [C.21: 如果对任何默认操作提供了定义或者 `=delete`，请为所有默认操作都提供定义或者 `=delete`](#Rc-five)
+* [C.21: 如果定义或者 `=delete` 了任何复制、移动或析构函数，请定义或者 `=delete` 它们全部](#Rc-five)
 * [C.22: 使默认操作之间保持一致](#Rc-matched)
 
 析构函数的规则：
@@ -4495,7 +4501,7 @@ C++ 的内建类型都是正规的，标准库中的类，如 `string`，`vector
 * [C.30: 如果一个类需要在对象销毁时执行明确的操作，请为其定义析构函数](#Rc-dtor)
 * [C.31: 类所获取的所有资源，必须都在类的析构函数中进行释放](#Rc-dtor-release)
 * [C.32: 如果类中带有原始指针（`T*`）或者引用（`T&`），请考虑它是否是所有者](#Rc-dtor-ptr)
-* [C.33: 如果类中带有所有权的指针成员，请定义析构函数或使之为 `=delete`](#Rc-dtor-ptr2)
+* [C.33: 如果类中带有所有权的指针成员，请定义析构函数](#Rc-dtor-ptr2)
 * [C.35: 基类的析构函数应当要么是 public 和 virtual，要么是 protected 且非 virtual](#Rc-dtor-virtual)
 * [C.36: 析构函数不能失败](#Rc-dtor-fail)
 * [C.37: 使析构函数 `noexcept`](#Rc-dtor-noexcept)
@@ -4575,29 +4581,25 @@ C++ 的内建类型都是正规的，标准库中的类，如 `string`，`vector
 【无法强制实施】 虽然无法强制实施，但一个优秀的静态分析器可以检查出一些模式，指出可使之符合本条规则的改进可能性。
 例如，一个带有（指针,大小）成员对，同时在析构函数中 `delete` 这个指针的类也许可以被转换为使用一个 `vector`。
 
-### <a name="Rc-five"></a>C.21: 如果对任何默认操作提供了定义或者 `=delete`，请为所有默认操作都提供定义或者 `=delete`
+### <a name="Rc-five"></a>C.21: 如果定义或者 `=delete` 了任何复制、移动或析构函数，请定义或者 `=delete` 它们全部
 
 ##### 理由
 
-*特殊成员函数*包括默认构造函数、复制构造函数，
-复制赋值运算符，移动构造函数，移动赋值运算符，以及
-析构函数。
+复制、移动和析构的语义互相之间是紧密相关的，一旦需要声明其中一个，麻烦的是其他的也需要予以考虑。
 
-特殊函数的语义互相之间是紧密相关的，一旦需要声明其中一个，麻烦的是其他的也需要予以考虑。
-
-声明除了默认构造函数之外的任何特殊成员函数，
+只要声明了复制、移动或析构函数，
 即便是声明为 `=default` 或 `=delete`，也将会抑制掉
 移动构造函数和移动赋值运算符的隐式声明。
 而声明移动构造函数或移动赋值运算符，
 即便是声明为 `=default` 或 `=delete`，也将会导致隐式生成的复制构造函数
 或隐式生成的复制赋值运算符被定义为弃置的。
-因此，只要声明了任何一个特殊函数，就应当将
+因此，只要声明了它们中的任何一个，就应当将
 其他全部都予以声明，以避免出现预期外的效果，比如将所有潜在的移动
 都变成了更昂贵的复制操作，或者使类变为只能移动的。
 
 ##### 示例，不好
 
-    struct M2 {   // 不好: 不完整的默认操作集合
+    struct M2 {   // 不好: 不完整的复制/移动/析构操作集合
     public:
         // ...
         // ... 没有复制和移动操作 ...
@@ -4619,12 +4621,12 @@ C++ 的内建类型都是正规的，标准库中的类，如 `string`，`vector
 
 ##### 注解
 
-这被称为“五之准则（The rule of five）”或“六之准则（The rule of six）”，区别是你是否把默认构造函数算入。
+这被称为“五之准则（The rule of five）”。
 
 ##### 注解
 
-如果想保持默认操作的缺省实现（当定义了别的默认操作时），请写下 `=default` 以表明对这个函数是特意这样做的。
-如果不想要一个默认操作，可以用 `=delete` 来抑制它。
+如果想（于定义了别的函数时）保持缺省实现，请写下 `=default` 以表明对这个函数是特意这样做的。
+如果不想要一个生成的缺省函数，可以用 `=delete` 来抑制它。
 
 ##### 示例，好
 
@@ -4669,7 +4671,7 @@ C++ 的内建类型都是正规的，标准库中的类，如 `string`，`vector
 
 ##### 注解
 
-写这六个特殊成员函数可能容易出错。
+编写这些函数很容易出错。
 注意它们的参数类型：
 
     class X {
@@ -4687,7 +4689,7 @@ C++ 的内建类型都是正规的，标准库中的类，如 `string`，`vector
 
 ##### 强制实施
 
-【简单】 类中应当要么为每个特殊函数都提供一个声明（即便是 `=delete`），要么都不这样做。
+【简单】 类中应当要么为每个复制/移动/析构函数都提供一个声明（即便是 `=delete`），要么都不这样做。
 
 ### <a name="Rc-matched"></a>C.22: 使默认操作之间保持一致
 
@@ -4720,7 +4722,7 @@ C++ 的内建类型都是正规的，标准库中的类，如 `string`，`vector
 
 ## <a name="SS-dtor"></a>C.dtor: 析构函数
 
-“这个类需要析构函数吗？”是一个出人意料强有力的设计问题。
+“这个类需要析构函数吗？”是一个出人意料有洞察力的设计问题。
 对于大多数类来说，答案是“不需要”，要么是因为类中并没有保持任何资源，要么是因为销毁过程已经被[零之准则](#Rc-zero)处理掉了；
 就是说，它的成员在销毁之中可以自己照顾自己。
 当答案为“需要”时，类的大部分设计应当遵循下列规则（参见[五之准则](#Rc-five)）。
@@ -4738,7 +4740,7 @@ C++ 的内建类型都是正规的，标准库中的类，如 `string`，`vector
     template<typename A>
     struct final_action {   // 略有简化
         A act;
-        final_action(A a) :act{a} {}
+        final_action(A a) : act{a} {}
         ~final_action() { act(); }
     };
 
@@ -4750,7 +4752,7 @@ C++ 的内建类型都是正规的，标准库中的类，如 `string`，`vector
 
     void test()
     {
-        auto act = finally([]{ cout << "Exit test\n"; });  // 设置退出动作
+        auto act = finally([] { cout << "Exit test\n"; });  // 设置退出动作
         // ...
         if (something) return;   // 动作在这里得到执行
         // ...
@@ -5627,7 +5629,7 @@ C++11 的初始化式列表规则免除了对许多构造函数的需求。例�
     class D {   // 好
         string s1;
     public:
-        A(string_view v) : s1{v} { }    // 好: 直接构造
+        D(string_view v) : s1{v} { }    // 好: 直接构造
         // ...
     };
 
@@ -5645,7 +5647,8 @@ C++11 的初始化式列表规则免除了对许多构造函数的需求。例�
 
     class B {
     public:
-        B() {
+        B()
+        {
             /* ... */
             f(); // 不好: C.82：不要在构造函数和析构函数中调用虚函数
             /* ... */
@@ -6176,7 +6179,8 @@ ISO 标准中对标准库容器类仅仅保证了“有效但未指明”的状�
         // ...
     };
 
-    void f(B& b) {
+    void f(B& b)
+    {
         auto b2 = b; // 啊呀，对象切片了；b2.m() 将返回 'B'
     }
 
@@ -6199,7 +6203,8 @@ ISO 标准中对标准库容器类仅仅保证了“有效但未指明”的状�
         // ...
     };
 
-    void f(B& b) {
+    void f(B& b)
+    {
         auto b2 = b; // ok，编译器能够检测到不恰当的复制并给出警告
     }
 
@@ -6292,7 +6297,7 @@ ISO 标准中对标准库容器类仅仅保证了“有效但未指明”的状�
 
 `unique_ptr` 可以移动但不能复制。为达成这点，其复制操作是被弃置的。为了避免发生复制，需要将其从左值进行复制的操作定义为 `=delete`：
 
-    template <class T, class D = default_delete<T>> class unique_ptr {
+    template<class T, class D = default_delete<T>> class unique_ptr {
     public:
         // ...
         constexpr unique_ptr() noexcept;
@@ -6501,7 +6506,7 @@ ISO 标准中对标准库容器类仅仅保证了“有效但未指明”的状�
 
 `B` 的比较函数接受对其第二个操作数的类型转换，但第一个则并非如此。
 
-    class D :B {
+    class D : B {
         char character;
         virtual bool operator==(const D& a) const
         {
@@ -6543,7 +6548,7 @@ ISO 标准中对标准库容器类仅仅保证了“有效但未指明”的状�
         using result_type = size_t;
         using argument_type = My_type;
 
-        size_t operator() (const My_type & x) const
+        size_t operator()(const My_type & x) const
         {
             size_t xs = x.s.size();
             if (xs < 4) throw Bad_My_type{};    // "没有人期待西班牙宗教裁判所！"
@@ -6575,16 +6580,14 @@ ISO 标准中对标准库容器类仅仅保证了“有效但未指明”的状�
 
 ##### 示例，好 
 
-    struct base 
-    { 
-        virtual void update() = 0; 
-        std::shared_ptr<int> sp; 
-    }; 
+    struct base {
+        virtual void update() = 0;
+        std::shared_ptr<int> sp;
+    };
 
-    struct derived : public base 
-    { 
-        void update() override {} 
-    }; 
+    struct derived : public base {
+        void update() override {}
+    };
 
 ##### 示例，不好 
 
@@ -6705,7 +6708,7 @@ ISO 标准中对标准库容器类仅仅保证了“有效但未指明”的状�
     {
         Sorted_vector<string> v2 {v};
         if (v != v2)
-            cout << "insanity rules!\n";
+            cout << "Behavior against reason and logic.\n";
         // ...
     }
 
@@ -7140,7 +7143,7 @@ Lambda 表达式（通常通俗地简称为“lambda”）是一种产生函数�
 
     class Circle : public Shape {
     public:
-        Circle(Point c, int r) :Shape{c}, rad{r} { /* ... */ }
+        Circle(Point c, int r) : Shape{c}, rad{r} { /* ... */ }
 
         // ...
     private:
@@ -7186,7 +7189,7 @@ Lambda 表达式（通常通俗地简称为“lambda”）是一种产生函数�
 
     class Circle : public Shape {
     public:
-        Circle(Point c, int r, Color c) :cent{c}, rad{r}, col{c} { /* ... */ }
+        Circle(Point c, int r, Color c) : cent{c}, rad{r}, col{c} { /* ... */ }
 
         Point center() const override { return cent; }
         Color color() const override { return col; }
@@ -7641,7 +7644,7 @@ B 类别中的数据成员应当为 `private` 或 `const`。这是因为封装�
 
 对于可变基类，C++17 引入了一种 using 声明的可变形式：
 
-    template <class... Ts>
+    template<class... Ts>
     struct Overloader : Ts... {
         using Ts::operator()...; // 展露了每个基类中的 operator()
     };
@@ -8018,7 +8021,8 @@ B 类别中的数据成员应当为 `private` 或 `const`。这是因为封装�
 
 ##### 示例
 
-    void test() {
+    void test()
+    {
         // OK: 但出现重复；而且为这个 Bar 和 shared_ptr 的使用计数分别进行了分配
         shared_ptr<Bar> p {new Bar{7}};
 
@@ -8073,7 +8077,7 @@ B 类别中的数据成员应当为 `private` 或 `const`。这是因为封装�
 
 ## <a name="SS-overload"></a>C.over: 重载和运算符重载
 
-可以对普通函数，模板函数，以及运算符进行重载。
+可以对普通函数，函数模板，以及运算符进行重载。
 不能重载函数对象。
 
 重载规则概览：
@@ -8297,7 +8301,7 @@ C++ 语义中的很多部分都假定了其默认的含义。
 ##### 示例
 
     class Ptr { // 一种智能指针
-        Ptr(X* pp) :p(pp) { /* 检查 */ }
+        Ptr(X* pp) : p(pp) { /* 检查 */ }
         X* operator->() { /* 检查 */ return p; }
         X operator[](int i);
         X operator*();
@@ -8505,7 +8509,7 @@ C++ 语义中的很多部分都假定了其默认的含义。
         ~Immutable_string()
         {
             if (size >= buffer_size)
-                delete string_ptr;
+                delete[] string_ptr;
         }
 
         const char* get_str() const
@@ -8714,7 +8718,7 @@ C++ 语义中的很多部分都假定了其默认的含义。
 ##### 注解
 
 不幸的是，`union` 经常被用于类型双关。
-我们认为“它有时候能够按预期工作”并不是一种强力的理由。
+我们认为“它有时候能够按预期工作”并不是一种令人信服的理由。
 
 C++17 引入了一个独立类型 `std::byte` 以支持在原始对象表示上进行的操作。在这些操作中应当使用这个类型代替 `unsigned char` 或 `char`。
 
@@ -9094,7 +9098,7 @@ C++ 语言确保的构造函数/析构函数对称性，反映了资源的获取
 
 一旦发现一个“表现不良”的资源并未以带有析构函数的类来表示，就用一个类来包装它，或者使用 [`finally`](#Re-finally)。
 
-**参见**: [RAII](#Rr-raii)
+**参见**: [RAII](#Re-raii)
 
 ### <a name="Rr-use-ptr"></a>R.2: 接口中的原生指针（仅）代表个体对象
 
@@ -9497,8 +9501,8 @@ C 风格的字符串是以单个指向以零结尾的字符序列的指针来传
     {
         X x;
         X* p1 { new X };              // 参见 ???
-        unique_ptr<T> p2 { new X };   // 唯一所有权；参见 ???
-        shared_ptr<T> p3 { new X };   // 共享所有权；参见 ???
+        unique_ptr<X> p2 { new X };   // 唯一所有权；参见 ???
+        shared_ptr<X> p3 { new X };   // 共享所有权；参见 ???
         auto p4 = make_unique<X>();   // 唯一所有权，比显式使用“new”要好
         auto p5 = make_shared<X>();   // 共享所有权，比显式使用“new”要好
     }
@@ -9585,8 +9589,7 @@ C 风格的字符串是以单个指向以零结尾的字符序列的指针来传
 
     class bar;
 
-    class foo
-    {
+    class foo {
     public:
       explicit foo(const std::shared_ptr<bar>& forward_reference)
         : forward_reference_(forward_reference)
@@ -9595,8 +9598,7 @@ C 风格的字符串是以单个指向以零结尾的字符序列的指针来传
       std::shared_ptr<bar> forward_reference_;
     };
 
-    class bar
-    {
+    class bar {
     public:
       explicit bar(const std::weak_ptr<foo>& back_reference)
         : back_reference_(back_reference)
@@ -10292,7 +10294,7 @@ ISO C++ 标准库是最广为了解而且经过最好测试的程序库之一。
 
 ##### 示例
 
-    template <class InputIterator, class Predicate>
+    template<class InputIterator, class Predicate>
     bool any_of(InputIterator first, InputIterator last, Predicate pred);
 
 用 concept 则更佳：
@@ -10317,7 +10319,7 @@ ISO C++ 标准库是最广为了解而且经过最好测试的程序库之一。
 
 ##### 示例
 
-    int a = 7, b = 9, c, d = 10, e = 3;
+    int a = 10, b = 11, c = 12, d, e = 14, f = 15;
 
 在较长的声明符列表中，很容易忽视某个未能初始化的变量。
 
@@ -10331,7 +10333,7 @@ ISO C++ 标准库是最广为了解而且经过最好测试的程序库之一。
 
 * 单纯的重复既麻烦又易错。
 * 当使用 `auto` 时，所声明的实体的名字是处于声明的固定位置的，这增加了可读性。
-* 模板函数声明的返回类型可能是某个成员类型。
+* 函数模板声明的返回类型可能是某个成员类型。
 
 ##### 示例
 
@@ -10340,7 +10342,7 @@ ISO C++ 标准库是最广为了解而且经过最好测试的程序库之一。
     auto p = v.begin();   // vector<int>::iterator
     auto h = t.future();
     auto q = make_unique<int[]>(s);
-    auto f = [](int x){ return x + 10; };
+    auto f = [](int x) { return x + 10; };
 
 以上都避免了写下冗长又难记的类型，它们是编译器已知的，但程序员则可能会搞错。
 
@@ -10537,7 +10539,7 @@ ISO C++ 标准库是最广为了解而且经过最好测试的程序库之一。
 如果除此之外 `make_related_widgets` 函数是多余的，
 可以使用 lambda [ES.28](#Res-lambda-init) 来消除之：
 
-    auto [i, j] = [x]{ return (x) ? pair{f1(), f2()} : pair{f3(), f4()} }();    // C++17
+    auto [i, j] = [x] { return (x) ? pair{f1(), f2()} : pair{f3(), f4()} }();    // C++17
 
 用一个值代表 `uninitialized` 只是一种问题的症状，而不是一种解决方案：
 
@@ -10684,7 +10686,7 @@ ISO C++ 标准库是最广为了解而且经过最好测试的程序库之一。
 
 ##### 示例，不好
 
-    SomeLargeType var;   // 难看的骆驼风格命名
+    SomeLargeType var;  // 很难读的驼峰变量
 
     if (cond)   // 某个不简单的条件
         Set(&var);
@@ -10880,10 +10882,10 @@ C++17 的规则多少会少些意外：
 
 你可能想把一个缓冲区当做暂存器来重复使用以作为一种优化措施，但即便如此也请尽可能限定该变量的作用域，还要当心不要导致由于遗留在重用的缓冲区中的数据而引发的 BUG，这是安全性 BUG 的一种常见来源。
 
-    void write_to_file() {
+    void write_to_file()
+    {
         std::string buffer;             // 以避免每次循环重复中的重新分配
-        for (auto& o : objects)
-        {
+        for (auto& o : objects) {
             // 第一部分工作。
             generate_first_string(buffer, o);
             write_to_file(buffer);
@@ -10960,23 +10962,13 @@ C++17 的规则多少会少些意外：
 
 ##### 示例，好
 
-    const widget x = [&]{
+    const widget x = [&] {
         widget val;                                // 假定 widget 具有默认构造函数
         for (auto i = 2; i <= N; ++i) {            // 这是由 x 的
             val += some_obj.do_something_with(i);  // 初始化所需的
         }                                          // 一段任意长的代码
         return val;
     }();
-
-##### 示例
-
-    string var = [&]{
-        if (!in) return "";   // 默认值
-        string s;
-        for (char c : in >> c)
-            s += toupper(c);
-        return s;
-    }(); // 注意这个 ()
 
 如果可能的话，应当将条件缩减成一个后续的简单集合（比如一个 `enum`），并避免把选择和初始化相互混合起来。
 
@@ -11164,7 +11156,7 @@ C++17 的规则多少会少些意外：
         std::exit(severity);
     }
 
-    template <typename T, typename... Ts>
+    template<typename T, typename... Ts>
     constexpr void error(int severity, T head, Ts... tail)
     {
         std::cerr << head;
@@ -11710,7 +11702,7 @@ C++17 收紧了有关求值顺序的规则，但函数实参求值顺序仍然�
 
 ##### 强制实施
 
-* 强制消除除了带有 `[[nodiscard]]` 返回的函数上之外的 C 风格的强制转换。
+* 除了将 `[[nodiscard]]` 函数的返回值强制转换为 `void` 之外，强行消除 C 风格的强制转换。
 * 当存在许多函数风格的强制转换时给出警告（显而易见的问题是如何量化“许多”）。
 * [类型剖面配置](#Pro-type-reinterpretcast)禁用了 `reinterpret_cast`。
 * 对指针类型之间的[同一强制转换](#Pro-type-identitycast)给出警告，这之中的源类型和目标类型相同(#Pro-type-identitycast)。
@@ -11755,7 +11747,7 @@ C 风格的强制转换很危险，因为它可以进行任何种类的转换，
 ##### 注解
 
 当在类型之间进行没有信息丢失的转换时（比如从 `float` 到
-`double` 或者从 `int64` 到 `int32`），可以代之以使用花括号初始化。
+`double` 或者从 `int32` 到 `int64`），可以代之以使用花括号初始化。
 
     double d {some_float};
     int64_t i {some_int32};
@@ -11807,11 +11799,13 @@ C 风格的强制转换很危险，因为它可以进行任何种类的转换，
     class Foo {
     public:
         // 不好，逻辑重复
-        Bar& get_bar() {
+        Bar& get_bar()
+        {
             /* 获取 my_bar 的非 const 引用前后的复杂逻辑 */
         }
 
-        const Bar& get_bar() const {
+        const Bar& get_bar() const
+        {
             /* 获取 my_bar 的 const 引用前后的相同的复杂逻辑 */
         }
     private:
@@ -11823,10 +11817,12 @@ C 风格的强制转换很危险，因为它可以进行任何种类的转换，
     class Foo {
     public:
         // 不大好，非 const 函数调用 const 版本但借助于 const_cast
-        Bar& get_bar() {
+        Bar& get_bar()
+        {
             return const_cast<Bar&>(static_cast<const Foo&>(*this).get_bar());
         }
-        const Bar& get_bar() const {
+        const Bar& get_bar() const
+        {
             /* 获取 my_bar 的 const 引用前后的复杂逻辑 */
         }
     private:
@@ -12005,7 +12001,8 @@ C 风格的强制转换很危险，因为它可以进行任何种类的转换，
 通常来说，`std::move()` 都用做某个 `&&` 形参的实参。
 而这点之后，应当假定对象已经被移走（参见 [C.64](#Rc-move-semantic)），而直到首次向它设置某个新值之前，请勿再次读取它的状态。
 
-    void f() {
+    void f()
+    {
         string s1 = "supercalifragilisticexpialidocious";
 
         string s2 = s1;             // ok, 接收了一个副本
@@ -12022,7 +12019,8 @@ C 风格的强制转换很危险，因为它可以进行任何种类的转换，
 
     void sink(unique_ptr<widget> p);  // 将 p 的所有权传递给 sink()
 
-    void f() {
+    void f()
+    {
         auto w = make_unique<widget>();
         // ...
         sink(std::move(w));               // ok, 交给 sink()
@@ -12042,7 +12040,8 @@ C 风格的强制转换很危险，因为它可以进行任何种类的转换，
 
 ##### 示例，不好
 
-    vector<int> make_vector() {
+    vector<int> make_vector()
+    {
         vector<int> result;
         // ... 加载 result 的数据
         return std::move(result);       // 不好; 直接写 "return result;" 即可
@@ -12061,14 +12060,16 @@ C 风格的强制转换很危险，因为它可以进行任何种类的转换，
 
 ##### 示例
 
-    void mover(X&& x) {
+    void mover(X&& x)
+    {
         call_something(std::move(x));         // ok
         call_something(std::forward<X>(x));   // 不好, 请勿对右值引用 std::forward
         call_something(x);                    // 可疑  为什么不用std:: move?
     }
 
     template<class T>
-    void forwarder(T&& t) {
+    void forwarder(T&& t)
+    {
         call_something(std::move(t));         // 不好, 请勿对转发引用 std::move
         call_something(std::forward<T>(t));   // ok
         call_something(t);                    // 可疑, 为什么不用 std::forward?
@@ -12177,7 +12178,8 @@ C 风格的强制转换很危险，因为它可以进行任何种类的转换，
     Shape s {c};    // 仅复制构造了 Circle 中的 Shape 部分
     s = c;          // 仅复制赋值了 Circle 中的 Shape 部分
 
-    void assign(const Shape& src, Shape& dest) {
+    void assign(const Shape& src, Shape& dest)
+    {
         dest = src;
     }
     Circle c2 {{1, 1}, 43};
@@ -12319,7 +12321,7 @@ C 风格的强制转换很危险，因为它可以进行任何种类的转换，
 * 使用 [unique_ptr](#Rf-unique_ptr) 以避免生存期问题。
 * 使用 [shared_ptr](#Rf-shared_ptr) 以避免生存期问题。
 * 当不可能出现 `nullptr` 时应使用[引用](#Rf-ptr-ref)。
-* 使用 [not_null](#Rf-not_null) 以尽早捕捉到预期外的 `nullptr`。
+* 使用 [not_null](#Rf-nullptr) 以尽早捕捉到预期外的 `nullptr`。
 * 使用[边界剖面配置](#SS-bounds)以避免范围错误。
 
 
@@ -12699,9 +12701,9 @@ C 风格的强制转换很危险，因为它可以进行任何种类的转换，
 
 ##### 示例
 
-    switch(x){
+    switch(x) {
     case 1 :
-        while(/* 某种条件 */){
+        while (/* 某种条件 */) {
             //...
         break;
         } //噢！打算 break switch 还是 break while？
@@ -12715,11 +12717,12 @@ C 风格的强制转换很危险，因为它可以进行任何种类的转换，
 通常，需要 `break` 的循环都是作为一个函数（算法）的良好候选者，其 `break` 将会变为 `return`。
 
     // 原始代码：break 内部循环
-    void use1(){
+    void use1()
+    {
         std::vector<T> vec = {/* 初始化为一些值 */};
         T value;
-        for(const T item : vec){
-            if(/* 某种条件 */){
+        for (const T item : vec) {
+            if (/* 某种条件 */) {
                 value = item;
                 break;
             }
@@ -12728,14 +12731,16 @@ C 风格的强制转换很危险，因为它可以进行任何种类的转换，
     }
 
     // 这样更好：创建一个函数使其从循环中返回
-    T search(const std::vector<T> &vec){
-        for(const T &item : vec){
-            if(/* 某种条件 */) return item;
+    T search(const std::vector<T> &vec)
+    {
+        for (const T &item : vec) {
+            if (/* 某种条件 */) return item;
         }
         return T(); // 默认值
     }
 
-    void use2(){
+    void use2()
+    {
         std::vector<T> vec = {/* 初始化为一些值 */};
         T value = search(vec);
         /* 然后对 value 做些事 */
@@ -12743,15 +12748,15 @@ C 风格的强制转换很危险，因为它可以进行任何种类的转换，
 
 通常，使用 `continue` 的循环都可以等价且同样简洁地用 `if` 语句来表达。
 
-    for(int item : vec){ // 不好
-        if(item%2 == 0) continue;
-        if(item == 5) continue;
-        if(item > 10) continue;
+    for (int item : vec) { // 不好
+        if (item%2 == 0) continue;
+        if (item == 5) continue;
+        if (item > 10) continue;
         /* 对 item 做些事 */
     }
 
-    for(int item : vec){ // 好
-        if(item%2 != 0 && item != 5 && item <= 10){
+    for (int item : vec) { // 好
+        if (item%2 != 0 && item != 5 && item <= 10) {
             /* 对 item 做些事 */
         }
     }
@@ -13255,20 +13260,23 @@ C 风格的强制转换很危险，因为它可以进行任何种类的转换，
 
 ##### 示例，不好
 
-    double divide(int a, int b) {
+    double divide(int a, int b)
+    {
         // 不好, 应当进行检查（比如一条前条件）
         return a / b;
     }
 
 ##### 示例，好
 
-    double divide(int a, int b) {
+    double divide(int a, int b)
+    {
         // 好, 通过前条件进行处置（并当 C++ 支持契约后可以进行替换）
         Expects(b != 0);
         return a / b;
     }
 
-    double divide(int a, int b) {
+    double divide(int a, int b)
+    {
         // 好, 通过检查进行处置
         return b ? a / b : quiet_NaN<double>();
     }
@@ -13504,8 +13512,7 @@ href="#Rper-Knuth">Per.2</a>。）
 
     vector<uint8_t> v(100000);
 
-    for (size_t i = 0; i < v.size(); i += sizeof(uint64_t))
-    {
+    for (size_t i = 0; i < v.size(); i += sizeof(uint64_t)) {
         uint64_t& quad_word = *reinterpret_cast<uint64_t*>(&v[i]);
         quad_word = ~quad_word;
     }
@@ -13641,7 +13648,7 @@ href="#Rper-Knuth">Per.2</a>。）
 
 考虑：
 
-    template <class ForwardIterator, class T>
+    template<class ForwardIterator, class T>
     bool binary_search(ForwardIterator first, ForwardIterator last, const T& val);
 
 `binary_search(begin(c), end(c), 7)` 能够得出 `7` 是否在 `c` 之中。
@@ -13650,14 +13657,14 @@ href="#Rper-Knuth">Per.2</a>。）
 有时候仅把最小数量的信息传递回来（如这里的 `true` 或 `false`）是足够的，但一个好的接口会
 向调用方传递其所需的信息。因此，标准库还提供了
 
-    template <class ForwardIterator, class T>
+    template<class ForwardIterator, class T>
     ForwardIterator lower_bound(ForwardIterator first, ForwardIterator last, const T& val);
 
 `lower_bound` 返回第一个匹配元素（如果有）的迭代器，否则返回第一个大于 `val` 的元素的迭代器，找不到这样的元素时，返回 `last`。
 
 不过 `lower_bound` 还是无法为所有用法返回足够的信息，因此标准库还提供了
 
-    template <class ForwardIterator, class T>
+    template<class ForwardIterator, class T>
     pair<ForwardIterator, ForwardIterator>
     equal_range(ForwardIterator first, ForwardIterator last, const T& val);
 
@@ -13930,27 +13937,50 @@ C++11 引入了许多核心并发原语，C++14 和 C++17 对它们进行了改�
 
     double cached_computation(double x)
     {
-        // 不好：这两个静态变量导致多线程的使用情况中的数据竞争
+        // 不好：这些静态变量导致多线程的使用情况中的数据竞争
         static double cached_x = 0.0;
         static double cached_result = COMPUTATION_OF_ZERO;
-        double result;
 
-        if (cached_x == x)
-            return cached_result;
-        result = computation(x);
-        cached_x = x;
-        cached_result = result;
-        return result;
+        if (cached_x != x) {
+            cached_x = x;
+            cached_result = computation(x);
+        }
+        return cached_result;
     }
 
 虽然 `cached_computation` 在单线程环境中可以正确工作，但在多线程环境中，其两个 `static` 变量将导致数据竞争进而发生未定义的行为。
 
-有多种方法可以让这个例子在多线程环境中变得安全：
+##### 示例，好
 
-* 将并发事务委派给调用方处理。
-* 将 `static` 变量标为 `thread_local`（这可能让缓存变得不那么有效）。
-* 实现并发控制逻辑，例如，用一个 `static` 锁来保护这两个 `static` 变量（这可能会降低性能）。
-* 让调用方提供用于缓存的内存，由此同时把内存分配和并发事务委派给了调用方。
+    struct ComputationCache {
+        double cached_x = 0.0;
+        double cached_result = COMPUTATION_OF_ZERO;
+
+        double compute(double x) {
+            if (cached_x != x) {
+                cached_x = x;
+                cached_result = computation(x);
+            }
+            return cached_result;
+        }
+    };
+
+这里的缓存作为 `ComputationCache` 对象的成员数据保存，而非共享的静态状态。
+这项重构本质上是将关注点委派给了调用方：
+单线程程序可能仍会选择采用一个全局的 `ComputationCache` 对象，
+而多线程程序可能会为每个线程准备一个 `ComputationCache`，或者为任意定义的“上下文”每个准备一个。
+重构后的函数不再试图管理 `cached_x` 的分配。
+这方面可以看做是对单一职责原则（SRP）的一次应用。
+
+在这个特定的例子中，为线程安全性进行的重构同样改进了其在单线程程序中的可用性。
+不难想象，某个单线程程序可能需要在程序的不同部分中使用两个 `ComputationCache` 实例，
+并且它们并不会覆盖掉互相的缓冲数据。
+
+还有其他的一些方法，可以为针对标准多线程环境（就是唯一的并发形式是 `std::thread` 的环境）编写的
+代码添加线程安全性：
+
+* 将状态变量标为 `thread_local` 而非 `static`。
+* 实现并发控制逻辑，例如，用一个 `static std::mutex` 来保护对这两个 `static` 变量的访问。
 * 拒绝在多线程环境中进行构建和/或运行。
 * 提供两个实现，一个用在单线程环境中，另一个用在多线程环境中。
 
@@ -13979,7 +14009,8 @@ C++11 引入了许多核心并发原语，C++14 和 C++17 对它们进行了改�
 有大量存在数据竞争的例子，其中的一些现在这个时候就运行在
 产品软件之中。一个非常简单的例子是：
 
-    int get_id() {
+    int get_id()
+    {
       static int id = 1;
       return id++;
     }
@@ -14004,9 +14035,9 @@ C++11 引入了许多核心并发原语，C++14 和 C++17 对它们进行了改�
         int sz = read_vec(fs, buf, max);            // 从 fs 读取到 buf 中
         gsl::span<double> s {buf};
         // ...
-        auto h1 = async([&]{ sort(std::execution::par, s); });     // 产生一个进行排序的任务
+        auto h1 = async([&] { sort(std::execution::par, s); });     // 产生一个进行排序的任务
         // ...
-        auto h2 = async([&]{ return find_all(buf, sz, pattern); });   // 产生一个查找匹配的任务
+        auto h2 = async([&] { return find_all(buf, sz, pattern); });   // 产生一个查找匹配的任务
         // ...
     }
 
@@ -14105,7 +14136,8 @@ C++11 引入了许多核心并发原语，C++14 和 C++17 对它们进行了改�
 
 ##### 理由
 
-    void some_fun() {
+    void some_fun()
+    {
         std::string msg, msg2;
         std::thread publisher([&] { msg = "Hello"; });       // 不好: 表达性不足
                                                              //       且更易错
@@ -14483,14 +14515,14 @@ C++ 对此的机制是 `atomic` 类型：
 
 `joining_thread` 是一种在其作用域结尾处进行联结的线程。
 脱离的线程很难进行监管。
-确保脱离的线程（和潜在脱离的线程）中没有错误则更加困哪。
+确保脱离的线程（和潜在脱离的线程）中没有错误则更加困难。
 
 ##### 示例，不好
 
     void f() { std::cout << "Hello "; }
 
     struct F {
-        void operator()() { std::cout << "parallel world "; }
+        void operator()() const { std::cout << "parallel world "; }
     };
 
     int main()
@@ -14504,7 +14536,7 @@ C++ 对此的机制是 `atomic` 类型：
     void f() { std::cout << "Hello "; }
 
     struct F {
-        void operator()() { std::cout << "parallel world "; }
+        void operator()() const { std::cout << "parallel world "; }
     };
 
     int main()
@@ -14515,29 +14547,6 @@ C++ 对此的机制是 `atomic` 类型：
         t1.join();
         t2.join();
     }  // 剩下一个糟糕的 BUG
-
-
-##### 示例，不好
-
-决定是要 `join()` 还是 `detach()` 的代码可能很复杂，甚至是可能由线程中所调用的函数所决定，也可能由创建线程的函数所调用的函数来决定：
-
-    void tricky(thread* t, int n)
-    {
-        // ...
-        if (is_odd(n))
-            t->detach();
-        // ...
-    }
-
-    void use(int n)
-    {
-        thread t { tricky, this, n };
-        // ...
-        // ... 这里应不应该联结？ ...
-    }
-
-这极大地使生存期分析复杂化了，而且在并不非常罕见的情况下甚至使得生存期分析变得不可能。
-这意味着，我们无法在线程中安全地涉指 `use()` 的局部对象，或者从 `use()` 中安全地涉指线程中的局部对象。
 
 ##### 注解
 
@@ -14552,9 +14561,9 @@ C++ 对此的机制是 `atomic` 类型：
 
 标记 `std::thread` 的使用：
 
-* 建议使用 `gsl::joining_thread`.
+* 建议使用 `gsl::joining_thread` 或 C++20 的 `std:jthread`.
 * 建议当其脱离时使其[“外放所有权”](#Rconc-detached_thread)到某个外围作用域中。
-* 如果不明确线程是联结还是脱离，则严正警告。
+* 如果不明确线程是联结还是脱离，则给出警告。
 
 ### <a name="Rconc-detached_thread"></a>CP.26: 不要 `detach()` 线程
 
@@ -14697,7 +14706,7 @@ C++ 对此的机制是 `atomic` 类型：
         // 处理
     }
 
-    void master(istream& is)
+    void dispatcher(istream& is)
     {
         for (Message m; is >> m; )
             run_list.push_back(new thread(worker, m));
@@ -14709,7 +14718,7 @@ C++ 对此的机制是 `atomic` 类型：
 
     Sync_queue<Message> work;
 
-    void master(istream& is)
+    void dispatcher(istream& is)
     {
         for (Message m; is >> m; )
             work.put(m);
@@ -14797,7 +14806,7 @@ C++ 对此的机制是 `atomic` 类型：
     void Sync_queue<T>::get(T& val)
     {
         unique_lock<mutex> lck(mtx);
-        cond.wait(lck, [this]{ return !q.empty(); });    // 防止假性唤醒
+        cond.wait(lck, [this] { return !q.empty(); });    // 防止假性唤醒
         val = q.front();
         q.pop_front();
     }
@@ -14962,8 +14971,9 @@ C++ 对此的机制是 `atomic` 类型：
 
 ##### 理由
 
-`future` 为异步任务保持了常规函数调用的返回语义。
-它没有显式的锁定，而且正确的（值）返回和错误的（异常）返回都能被简单处理。
+[R.12](#Rr-immediate-alloc) 告诉我们要避免原始所有权指针，与此相似，
+我们也要尽可能避免原始线程和原始承诺（promise）。应使用诸如 `std::async` 之类的工厂函数，
+它将处理线程的产生和重用，而不会讲原始线程暴露给你自己的代码。
 
 ##### 示例
 
@@ -14978,25 +14988,63 @@ C++ 对此的机制是 `atomic` 类型：
 
     void async_example()
     {
-        try
-        {
-            auto v1 = std::async(std::launch::async, read_value, "v1.txt"); 
-            auto v2 = std::async(std::launch::async, read_value, "v2.txt");
-            std::cout << v1.get() + v2.get() << '\n';
-        }
-        catch (std::ios_base::failure & fail) 
-        {
+        try {
+            std::future<int> f1 = std::async(read_value, "v1.txt");
+            std::future<int> f2 = std::async(read_value, "v2.txt");
+            std::cout << f1.get() + f2.get() << '\n';
+        } catch (std::ios_base::failure & fail) {
             // 此处处理异常
         }
     }
 
 ##### 注解
 
-不幸的是，`async()` 并不完善。
-比如说，它并不保证用线程池来最小化线程的创建。
-实际上，大多数当前的 `async()` 实现都不这样做。
-不过，`async()` 很简单而且逻辑正确，因此在某种更好的东西到来之前，
-而且除非你确实需要为大量异步任务进行优化，都可以容忍 `async()`。
+不幸的是，`async()` 并不完美。比如说，它并不使用线程池，
+这意味着它可能会因为资源耗尽而失败，而不会将你的任务放入队列以便随后执行。
+不过，即便你不能用 `std::async`，你也应当优先编写自己的返回
+`future` 的工厂函数，而非使用原始承诺。
+
+##### 示例（不好）
+
+这个例子展示了两种方式，都使用了 `std::future` 却未能避免对原始
+`std::thread` 的管理。
+
+    void async_example()
+    {
+        std::promise<int> p1;
+        std::future<int> f1 = p1.get_future();
+        std::thread t1([p1 = std::move(p1)]() mutable {
+            p1.set_value(read_value("v1.txt"));
+        });
+        t1.detach(); // 恶行
+
+        std::packaged_task<int()> pt2(read_value, "v2.txt");
+        std::future<int> f2 = pt2.get_future();
+        std::thread(std::move(pt2)).detach();
+
+        std::cout << f1.get() + f2.get() << '\n';
+    }
+
+##### 示例（好）
+
+这个例子展示一种方法，可以让你在当 `std::async` 自身
+在产品中不可接受的情形中，模仿 `std::async` 所设立的
+一般模式的方法。
+
+    void async_example(WorkQueue& wq)
+    {
+        std::future<int> f1 = wq.enqueue([]() {
+            return read_value("v1.txt");
+        });
+        std::future<int> f2 = wq.enqueue([]() {
+            return read_value("v2.txt");
+        });
+        std::cout << f1.get() + f2.get() << '\n';
+    }
+
+所有为执行 `read_value` 的代码而产生的线程都被隐藏到对
+`WorkQueue::enqueue` 的调用之内。用户代码仅需处理 `future` 对象，
+无需处理原始 `thread`，`promise` 或 `packaged_task` 对象。
 
 ##### 强制实施
 
@@ -15255,7 +15303,8 @@ C++ 对此的机制是 `atomic` 类型：
 `volatile` 局部变量几乎都是错误的——既然是短暂的，它们如何才能共享给其他语言或硬件呢？
 因为相同的理由，这几乎同样强有力地适用于成员变量。
 
-    void f() {
+    void f()
+    {
         volatile int i = 0; // 不好，volatile 局部变量
         // etc.
     }
@@ -15362,7 +15411,7 @@ C++ 对此的机制是 `atomic` 类型：
 `File_handle` 的构造函数可以这样定义：
 
     File_handle::File_handle(const string& name, const string& mode)
-        :f{fopen(name.c_str(), mode.c_str())}
+        : f{fopen(name.c_str(), mode.c_str())}
     {
         if (!f)
             throw runtime_error{"File_handle: could not open " + name + " as " + mode"}
@@ -15415,7 +15464,8 @@ C++ 实现都倾向于基于假定异常的稀有而进行优化。
         try {
             for (gsl::index i = 0; i < vec.size(); ++i)
                 if (vec[i] == x) throw i;  // 找到了 x
-        } catch (int i) {
+        }
+        catch (int i) {
             return i;
         }
         return -1;   // 未找到
@@ -16296,7 +16346,7 @@ C 风格的错误处理就是基于全局变量 `errno` 的，因此基本上不
         catch (Base& b) { /* ... */ }
         catch (Derived& d) { /* ... */ }
         catch (...) { /* ... */ }
-        catch (std::exception& e){ /* ... */ }
+        catch (std::exception& e) { /* ... */ }
     }
 
 若 `Derived` 派生自 `Base` 则 `Derived` 的处理器永远不会被执行。
@@ -16363,7 +16413,8 @@ C 风格的错误处理就是基于全局变量 `errno` 的，因此基本上不
         // ...
     };
 
-    void f(const Point& pt) {
+    void f(const Point& pt)
+    {
         int x = pt.getx();          // 错误，无法通过编译，因为 getx 并未标记为 const
     }
 
@@ -16539,8 +16590,8 @@ GCC 6.1 及其后版本支持概念。
 * [T.24: 用标签类或特征类来区分仅在语义上存在差别的概念](#Rt-tag)
 * [T.25: 避免互补性的约束](#Rt-not)
 * [T.26: 优先采用使用模式而不是简单的语法来定义概念](#Rt-use)
-* [T.30: 节制地采用概念求反（`!C<T>`）来表示微小差异](#Rt-not)
-* [T.31: 节制地采用概念析取（disjunction）（`C1<T> || C2<T>`）来表示备选项](#Rt-or)
+* [T.30: 节制地采用概念求反（`!C<T>`）来表示微小差异](#Rt-???)
+* [T.31: 节制地采用概念析取（disjunction）（`C1<T> || C2<T>`）来表示备选项](#Rt-???)
 * ???
 
 模板接口的规则概览：
@@ -16801,7 +16852,7 @@ GCC 6.1 及其后版本支持概念。
 ## <a name="SS-concepts"></a>T.concepts: 概念规则
 
 概念是一种用于为模板参数指定要求的设施。
-它是一项 [ISO 技术规范](#Ref-conceptsTS)，但当前仅由 GCC 所支持。
+它是一项 [ISO 技术规范](http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/n4553.pdf)，但当前仅由 GCC 所支持。
 然而，在考虑泛型编程，以及未来的 C++ 程序库（无论标准的还是其他的）的基础时，
 概念都是关键性的。
 
@@ -16888,7 +16939,7 @@ GCC 6.1 及其后版本支持概念。
 
 ##### 理由
 
-“标准”概念（即由 [GSL](#S-GSL) 和 [Ranges TS](http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2016/n4569.pdf)，以及希望近期 ISO 标准自身所提供的）概念，
+“标准”概念（即由 [GSL](#S-gsl) 和 [Ranges TS](http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2016/n4569.pdf)，以及希望近期 ISO 标准自身所提供的）概念，
 避免了我们思考自己的概念，它们比我们匆忙中能够想出来的要好得多，而且还提升了互操作性。
 
 ##### 注解
@@ -17671,7 +17722,7 @@ Lambda 会生成函数对象。
 
 ##### 示例
 
-    template <typename T>
+    template<typename T>
     enable_if_t<is_integral_v<T>>
     f(T v)
     {
@@ -17679,7 +17730,7 @@ Lambda 会生成函数对象。
     }
 
     // Equivalent to:
-    template <Integral T>
+    template<Integral T>
     void f(T v)
     {
         // ...
@@ -17687,7 +17738,7 @@ Lambda 会生成函数对象。
 
 ##### 注解
 
-请当心[互补约束](# T.25)。
+请当心[互补约束](#Rt-not)。
 当用 `enable_if` 来模拟概念重载时，有时候会迫使我们使用这种易错的设计技巧。
 
 ##### 强制实施
@@ -17737,7 +17788,8 @@ Lambda 会生成函数对象。
     }
 
     template<typename Iter>
-    Iter algo(Iter first, Iter last) {
+    Iter algo(Iter first, Iter last)
+    {
         for (; first != last; ++first) {
             auto x = sqrt(*first); // 潜在的意外依赖：哪个 sqrt()？
             helper(first, x);      // 潜在的意外依赖：
@@ -17859,7 +17911,7 @@ Lambda 会生成函数对象。
 ##### 注解
 
 这条规则的更一般化的版本是，
-“如果模板类的成员依赖于 M 个模板参数中的 N 个，就将它置于只有 N 个参数的基类之中。”
+“如果类模板的成员依赖于 M 个模板参数中的 N 个，就将它置于只有 N 个参数的基类之中。”
 当 N == 1 时，可以如同 [T.61](#Rt-scary) 一样在一个基类和其外围作用域中的一个类之间进行选择。
 
 ??? 常量的情况如何？类的静态成员呢？
@@ -17920,7 +17972,7 @@ Lambda 会生成函数对象。
         // 使用调用复制构造函数的循环
     }
 
-    template<class Itert>
+    template<class Iter>
     Out copy(Iter first, Iter last, Iter out)
     {
         return copy_helper(first, last, out, typename copy_trait<Iter>::tag{})
@@ -18036,7 +18088,7 @@ Lambda 会生成函数对象。
 当你打算为依赖于某个模板类型参数的值 `t` 调用自己的辅助函数 `helper(t)` 时，
 请将函数放入一个 `::detail` 命名空间中，并把调用限定为 `detail::helper(t);`。
 无限定的调用将成为一个定制点，它将会调用处于 `t` 的类型所在命名空间中的任何 `helper` 函数；
-这可能会导致诸如[意外地调用了无约束函数模板](#Rt-unconstrained-adl)这样的问题。
+这可能会导致诸如[意外地调用了无约束函数模板](#Rt-visible)这样的问题。
 
 
 ##### 强制实施
@@ -18075,7 +18127,7 @@ Lambda 会生成函数对象。
     Vector<int> vi;
     Vector<string> vs;
 
-这可能是一个比较笨拙的把 `sort` 定义为容器的成员函数的做法，不过这样做并不鲜见，而且它是一个展示不应当做的事情的好例子。
+把 `sort` 定义为容器的成员函数可能是一个比较糟糕的主意，不过这样做并不鲜见，而且它是一个展示不应当做的事情的好例子。
 
 在这之中，编译器不知道 `Vector<int>::sort()` 是不是会被调用，因此它必须为之生成代码。
 `Vector<string>::sort()` 也与此相似。
@@ -19023,7 +19075,8 @@ C++ 比 C 的表达能力更强，而且为许多种类的编程都提供了更�
 
     bool copy(/*... some parameters ...*/);    // some function that happens to be named copy
 
-    int main() {
+    int main()
+    {
         copy(/*...*/);    // now overloads local ::copy and std::copy, could be ambiguous
     }
 
@@ -19101,12 +19154,12 @@ C++ 比 C 的表达能力更强，而且为许多种类的编程都提供了更�
 避免当 `#include` 的头文件改变时改变一条 `#include`。
 避免意外地变为依赖于所包含的头文件中的实现细节和逻辑上独立的实体。
 
-##### 示例
+##### 示例，不好
 
     #include <iostream>
     using namespace std;
 
-    void use()                  // 不好
+    void use()
     {
         string s;
         cin >> s;               // 好
@@ -19122,6 +19175,8 @@ C++ 比 C 的表达能力更强，而且为许多种类的编程都提供了更�
 甚至偶尔出现的“`string` 无法用 `==` 来比较”。
 
 其解决方案是明确地 `#include <string>`：
+
+##### 示例，好
 
     #include <iostream>
     #include <string>
@@ -19205,6 +19260,7 @@ C++ 比 C 的表达能力更强，而且为许多种类的编程都提供了更�
     #include "helpers.h"    // 项目特定的文件，使用 "" 形式
 
 ##### 注解
+
 不遵守这条可能会导致很难诊断的错误：由于包含时指定的错误的范围而选择了错误的文件。
 
 程序库作者们应当把它们的头文件放到一个文件夹中，然后让其客户使用相对路径来包含这些文件：`#include <some_library/common.h>`。
@@ -20275,17 +20331,22 @@ C 标准库规则概览：
 
 ##### 示例，不好
 
+    // 老式传统风格：有许多问题
+
     class Picture
     {
         int mx;
         int my;
         char * data;
     public:
+        // 主要问题：构造函数未进行完全构造
         Picture(int x, int y)
         {
-            mx = x,
+            mx = x;         // 也不好：在构造函数体中而非
+                            // 成员初始化式中进行赋值
             my = y;
-            data = nullptr;
+            data = nullptr; // 也不好：在构造函数中而非
+                            // 成员初始化式中进行常量初始化
         }
 
         ~Picture()
@@ -20293,6 +20354,9 @@ C 标准库规则概览：
             Cleanup();
         }
 
+        // ...
+
+        // 不好：两阶段初始化
         bool Init()
         {
             // 不变式检查
@@ -20302,10 +20366,11 @@ C 标准库规则概览：
             if (data) {
                 return false;
             }
-            data = (char*) malloc(mx*my*sizeof(int));
+            data = (char*) malloc(mx*my*sizeof(int));   // 也不好：拥有原始指针，还用了 malloc
             return data != nullptr;
         }
 
+        // 也不好：没有理由让清理操作作为单独的函数
         void Cleanup()
         {
             if (data) free(data);
@@ -20324,20 +20389,20 @@ C 标准库规则概览：
 
     class Picture
     {
-        size_t mx;
-        size_t my;
+        int mx;
+        int my;
         vector<char> data;
 
-        static size_t check_size(size_t s)
+        static int check_size(int size)
         {
             // 不变式检查
-            Expects(s > 0);
-            return s;
+            Expects(size > 0);
+            return size;
         }
 
     public:
         // 更好的方式是以一个 2D 的 Size 类作为单个形参
-        Picture(size_t x, size_t y)
+        Picture(int x, int y)
             : mx(check_size(x))
             , my(check_size(y))
             // 现在已知 x 和 y 为有效的大小
@@ -20345,7 +20410,10 @@ C 标准库规则概览：
         {
             // 图片就绪可用
         }
+
         // 编译器生成的析构函数会完成工作。（另见 C.21）
+
+        // ...
     };
 
     Picture picture1(100, 100);
@@ -20464,7 +20532,7 @@ C 标准库规则概览：
   所使用的程序库必须是已被证明可以用于关键任务应用的。
   它和这个指导方针集合的相似性并不让人惊讶，因为 Bjarne Stroustrup 正是 JSF++ 的作者之一。
   建议采纳，但请注意其非常特定的关注领域。
-* [_MISRA C++ 2008: Guidelines for the use of the C++ language in critical systems_] (https://www.misra.org.uk/Buyonline/tabid/58/Default.aspx)。
+* [MISRA C++ 2008: Guidelines for the use of the C++ language in critical systems] (https://www.misra.org.uk/Buyonline/tabid/58/Default.aspx)。
 * [Mozilla Portability Guide](https://developer.mozilla.org/en-US/docs/Mozilla/C%2B%2B_Portability_Guide).
   如其名称所示，它关注于跨许多（老）编译器的兼容性。
   因此，它是很具有限制性的。
@@ -20862,7 +20930,7 @@ Range 提案，
 * `Pointer`  // 带有 `*`，`->`，`==`，以及默认构造的类型（默认构造被假定为设值为唯一的“null”值）；参见[智能指针](#SS-gsl-smartptrconcepts)
 * `Unique_pointer`  // 符合 `Pointer` 的类型，具有移动（而不是复制）操作，并符合生存期剖面配置中针对 `unique` 所有者类型的准则；参见[智能指针](#SS-gsl-smartptrconcepts)
 * `Shared_pointer`   // 符合 `Pointer` 的类型，具有复制操作，并符合生存期剖面配置中针对 `shared` 所有者类型的准则；参见[智能指针](#SS-gsl-smartptrconcepts)
-* `EqualityComparable`   // ???我们非得用 CaMelcAse 吗???
+* `EqualityComparable`
 * `Convertible`
 * `Common`
 * `Boolean`
@@ -21058,7 +21126,7 @@ IDE 也都会提供某些默认方案和一组替代方案。
 
     struct S {
         int m_;
-        S(int m) :m_{abs(m)} { }
+        S(int m) : m_{abs(m)} { }
     };
 
 这样做是没有害处的，且并不属于本条指导方针，因为其并未编码类型信息。
@@ -21202,6 +21270,38 @@ CamelCase：多词标识符的每个词首字母大写：
 
 不可能。
 
+### <a name="Rl-literals"></a>NL.11: 使字面量可阅读
+
+##### 理由
+
+可读性。
+
+##### 示例
+
+用数字分隔符来避免长串的数字
+
+    auto c = 299'792'458; // m/s2
+    auto q2 = 0b0000'1111'0000'0000;
+    auto ss_number = 123'456'7890;
+
+##### 示例
+
+需要清晰性时使用字面量后缀
+
+    auto hello = "Hello!"s; // std::string
+    auto world = "world";   // C 风格字符串
+    auto interval = 100ms;  // 使用 <chrono>
+
+##### 注解
+
+不能在代码中到处当做[“魔法常量”](#Res-magic)一样乱用字面量，
+但当定义它们时使它们更可读仍是个好主意。
+在较长的整数串中很容易出现拼写错误。
+
+##### 强制实施
+
+标记长数字串。麻烦的是“长”的定义；也许应当是 7。
+
 ### <a name="Rl-space"></a>NL.15: 节制地使用空格
 
 ##### 理由
@@ -21236,38 +21336,6 @@ CamelCase：多词标识符的每个词首字母大写：
 ##### 注解
 
 我们将恰当放置的空白评价为能够明显有助于可读性。但请勿过度。
-
-### <a name="Rl-literals"></a>NL.11: 使字面量可阅读
-
-##### 理由
-
-可读性。
-
-##### 示例
-
-用数字分隔符来避免长串的数字
-
-    auto c = 299'792'458; // m/s2
-    auto q2 = 0b0000'1111'0000'0000;
-    auto ss_number = 123'456'7890;
-
-##### 示例
-
-需要清晰性时使用字面量后缀
-
-    auto hello = "Hello!"s; // std::string
-    auto world = "world";   // C 风格字符串
-    auto interval = 100ms;  // 使用 <chrono>
-
-##### 注解
-
-不能在代码中到处当做[“魔法常量”](#Res-magic)一样乱用字面量，
-但当定义它们时使它们更可读仍是个好主意。
-在较长的整数串中很容易出现拼写错误。
-
-##### 强制实施
-
-标记长数字串。麻烦的是“长”的定义；也许应当是 7。
 
 ### <a name="Rl-order"></a>NL.16: 使用一种常规的类成员声明次序
 
@@ -21719,7 +21787,8 @@ GSL 是在指导方针中所指定的类型和别名的一个小集合。当写�
 
     class B {
     public:
-        B() {
+        B()
+        {
             /* ... */
             f(); // 不好: C.82：不要在构造函数和析构函数中调用虚函数
             /* ... */
@@ -21864,7 +21933,7 @@ GSL 是在指导方针中所指定的类型和别名的一个小集合。当写�
 
     class Nefarious {
     public:
-        Nefarious()  { /* 可能抛出异常的代码 */ }   // 好
+        Nefarious() { /* 可能抛出异常的代码 */ }    // 好
         ~Nefarious() { /* 可能抛出异常的代码 */ }   // 不好, 可能抛出异常
         // ...
     };
@@ -21880,7 +21949,7 @@ GSL 是在指导方针中所指定的类型和别名的一个小集合。当写�
 
     这里，对 `s` 的复制可能抛出异常，且当其抛出了异常而 `n` 的析构函数也抛出了异常时，程序就会因调用 `std::terminate` 而退出，因为无法同时传播两个异常。
 
-2. 以 `Nefarious` 为成员或者基类的类同样很难安全地使用，因为它们的析构函数必须调用 `Nefarious` 的析构函数，且同样遭受其低劣的行为的毒害：
+2. 以 `Nefarious` 为成员或者基类的类同样很难安全地使用，因为它们的析构函数必须调用 `Nefarious` 的析构函数，且同样遭受其糟糕行为的毒害：
 
 
         class Innocent_bystander {
@@ -21890,7 +21959,7 @@ GSL 是在指导方针中所指定的类型和别名的一个小集合。当写�
 
         void test(string& s)
         {
-            Innocent_bystander i; // 要有更多麻烦了
+            Innocent_bystander i;  // 要有更多麻烦了
             string copy2 = s;      // 复制 string
         } // 依次销毁 copy 和 i
 
@@ -21931,7 +22000,8 @@ GSL 是在指导方针中所指定的类型和别名的一个小集合。当写�
 包括专门重载的 `operator delete` 和 `operator delete[]` 在内的回收函数也属于这一类别，因为一般它们也被用在清理过程，尤其是在异常处理过程中，用以对部分完成的工作进行撤回。
 除了析构函数和回收函数之外，一般的错误安全性技术也依赖于永不失败的 `swap` 操作——这种情况下，它们不仅用于实现确保成功的回滚操作，也用于实现确保成功的提交操作。例如，以下是对类型 `T` 的一种惯用的 `operator=` 实现，它在复制构造之后，调用了无失败的 `swap`：
 
-    T& T::operator=(const T& other) {
+    T& T::operator=(const T& other)
+    {
         auto temp = other;
         swap(temp);
         return *this;
@@ -22484,6 +22554,10 @@ Clang-tidy 有一组专门用于强制实施 C++ 核心指导方针的规则。�
   \[Meyers96]:        S. Meyers. More Effective C++ (Addison-Wesley, 1996).
 * <a name="Meyers97"></a>
   \[Meyers97]:        S. Meyers. Effective C++ (2nd Edition) (Addison-Wesley, 1997).
+* <a name="Meyers01"></a>
+  \[Meyers01]:        S. Meyers. Effective STL (Addison-Wesley, 2001).
+* <a name="Meyers05"></a>
+  \[Meyers05]:        S. Meyers. Effective C++ (3rd Edition) (Addison-Wesley, 2005).
 * <a name="Meyers15"></a>
   \[Meyers15]:        S. Meyers. Effective Modern C++ (O'Reilly, 2015).
 * <a name="Murray93"></a>
