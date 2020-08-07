@@ -1,6 +1,6 @@
 # <a name="main"></a>C++ 核心指导方针
 
-2020/7/3
+2020/8/3
 
 
 编辑：
@@ -1227,7 +1227,7 @@ C++ 程序员应当熟知标准库的基本知识，并在适当的时候加以�
 * [I.13: 不要只用一个指针来传递数组](#Ri-array)
 * [I.22: 避免全局对象之间进行复杂的初始化](#Ri-global-init)
 * [I.23: 保持较少的函数参数数量](#Ri-nargs)
-* [I.24: 避免出现相邻而无关的相同类型的参数](#Ri-unrelated)
+* [I.24: 若改变实参顺序可能改变其含义，则避免出现相邻的相同类型的形参](#Ri-unrelated)
 * [I.25: 优先以抽象类作为类层次的接口](#Ri-abstract)
 * [I.26: 当想要跨编译器的 ABI 时，使用一个 C 风格的语言子集](#Ri-abi)
 * [I.27: 对于稳定的程序库 ABI，考虑使用 Pimpl 手法](#Ri-pimpl)
@@ -2103,7 +2103,7 @@ GCC 6.1 及其后版本支持概念。
 * 当函数声明了两个类型相同的迭代器（也包括指针）而不是一个范围或视图，就给出警告。
 * 【无法强制实施】 这是一条理念性的指导方针，进行直接的检查是不可行的。
 
-### <a name="Ri-unrelated"></a>I.24: 避免出现相邻而无关的相同类型的参数
+### <a name="Ri-unrelated"></a>I.24: 若改变实参顺序可能改变其含义，则避免出现相邻的相同类型的形参
 
 ##### 理由
 
@@ -6824,7 +6824,7 @@ Lambda 表达式（通常通俗地简称为“lambda”）是一种产生函数�
 * [C.136: 用多继承来表达一些实现特性的合并](#Rh-mi-implementation)
 * [C.137: 用 `virtual` 基类以避免过于通用的基类](#Rh-vbase)
 * [C.138: 用 `using` 来为派生类和其基类建立重载集合](#Rh-using)
-* [C.139: `final` 的运用应当保守](#Rh-final)
+* [C.139: 对类运用 `final` 应当保守](#Rh-final)
 * [C.140: 不要在虚函数和其覆盖函数上提供不同的默认参数](#Rh-virtual-default-arg)
 
 对类层次中的对象进行访问的规则概览：
@@ -7082,6 +7082,10 @@ Lambda 表达式（通常通俗地简称为“lambda”）是一种产生函数�
 
 * **隐式虚函数**: 程序员有意使函数隐含为虚函数，而它确实如此（但代码的读者搞不清楚这点）；或者，程序员有意使函数隐含为虚函数，但它并非如此（例如，由于微妙的参数列表不匹配所导致）；或者，程序员并非有意使函数为虚函数，但它却成为虚函数（由于它刚好与基类中的某个虚函数具有相同的签名）
 * **隐式覆盖**: 程序员有意使函数隐式地成为覆盖函数，而它确实如此（但代码的读者搞不清楚这点）；或者，程序员有意使函数隐式地成为覆盖函数，但它并非如此（例如，由于微妙的参数列表不匹配）；或者，程序员并非有意使函数成为覆盖函数，但它却成为覆盖函数（由于它刚好与基类中的某个虚函数具有相同的签名 -- 注意无论这个函数是否被显式声明为虚函数都会发生这个问题，因为程序员的意图既可能是要创建一个新的虚函数也可能要创建一个新的非虚函数）
+
+注意：对于定义为 `final` 的类来说，是否在一个虚函数上标记 `override` 或 `final` 是无所谓的。
+
+注意：对函数使用 `final` 要保守。它不一定会带来优化，但会排除进一步的覆盖。
 
 ##### 强制实施
 
@@ -7653,11 +7657,11 @@ B 类别中的数据成员应当为 `private` 或 `const`。这是因为封装�
 
 诊断名字隐藏情况
 
-### <a name="Rh-final"></a>C.139: `final` 的运用应当保守
+### <a name="Rh-final"></a>C.139: 对类运用 `final` 应当保守
 
 ##### 理由
 
-用 `final` 来把类层次封闭很少是由于逻辑上的原因而必须的，并可能破坏掉类层次的可扩展性。
+用 `final` 类来把类层次封闭很少是由于逻辑上的原因而必须的，并可能破坏掉类层次的可扩展性。
 
 ##### 示例，不好
 
@@ -7691,7 +7695,7 @@ B 类别中的数据成员应当为 `private` 或 `const`。这是因为封装�
 
 ##### 强制实施
 
-标记出 `final` 的所有使用。
+标记出所有在类上使用的 `final`。
 
 
 ### <a name="Rh-virtual-default-arg"></a>C.140: 不要在虚函数和其覆盖函数上提供不同的默认参数
@@ -9684,7 +9688,7 @@ C 风格的字符串是以单个指向以零结尾的字符序列的指针来传
 * 如果它可以复制，则将其当做一种具有引用计数的 `Shared_ptr`。
 * 如果它不能复制，则将其当做一种唯一的 `Unique_ptr`。
 
-##### 示例
+##### 示例，不好
 
     // 使用 Boost 的 intrusive_ptr
     #include <boost/intrusive_ptr.hpp>
@@ -11844,6 +11848,8 @@ C 风格的强制转换很危险，因为它可以进行任何种类的转换，
         static auto get_bar_impl(T& t) -> decltype(t.get_bar())
             { /* 获取 my_bar 的可能为 const 的引用前后的复杂逻辑 */ }
     };
+
+注意：不要在模板中编写大型的非待决代码，因为它将导致代码爆炸。例如，进一步改进是当 `get_bar_impl` 的全部或部分代码是非待决代码时将之重构移出到一个公共的非模板函数中去，这可能会使代码大小显著变小。
 
 ##### 例外
 
@@ -14029,7 +14035,7 @@ C++11 引入了许多核心并发原语，C++14 和 C++17 对它们进行了改�
 
 ##### 示例，不好
 
-    void f(fstream&  fs, regex pattern)
+    void f(fstream& fs, regex pattern)
     {
         array<double, max> buf;
         int sz = read_vec(fs, buf, max);            // 从 fs 读取到 buf 中
@@ -16185,25 +16191,27 @@ RAII（Resource Acquisition Is Initialization，资源获取即初始化）是�
     {
         Gadget g1 = make_gadget(17);
         if (!g1.valid()) {
-                return {0, g1_error};
+            return {0, g1_error};
         }
 
         Gadget g2 = make_gadget(17);
         if (!g2.valid()) {
-                cleanup(g1);
-                return {0, g2_error};
+            cleanup(g1);
+            return {0, g2_error};
         }
 
         // ...
 
         if (all_foobar(g1, g2)) {
-            cleanup(g1);
             cleanup(g2);
+            cleanup(g1);
             return {0, foobar_error};
+        }
+
         // ...
 
-        cleanup(g1);
         cleanup(g2);
+        cleanup(g1);
         return {res, 0};
     }
 
@@ -16213,31 +16221,35 @@ RAII（Resource Acquisition Is Initialization，资源获取即初始化）是�
     std::pair<int, error_indicator> user()
     {
         error_indicator err = 0;
+        int res = 0;
 
         Gadget g1 = make_gadget(17);
         if (!g1.valid()) {
-                err = g1_error;
-                goto exit;
+            err = g1_error;
+            goto g1_exit;
         }
 
         {
-        Gadget g2 = make_gadget(17);
-        if (!g2.valid()) {
+            Gadget g2 = make_gadget(31);
+            if (!g2.valid()) {
                 err = g2_error;
+                goto g2_exit;
+            }
+
+            if (all_foobar(g1, g2)) {
+                err = foobar_error;
                 goto exit;
+            }
+
+            // ...
+
+        g2_exit:
+            if (g2.valid()) cleanup(g2);
         }
 
-        if (all_foobar(g1, g2)) {
-            err = foobar_error;
-            goto exit;
-        }
-        // ...
-        }
-
-    exit:
-      if (g1.valid()) cleanup(g1);
-      if (g1.valid()) cleanup(g2);
-      return {res,err};
+    g1_exit:
+        if (g1.valid()) cleanup(g1);
+        return {res,err};
     }
 
 函数越大，这种技巧就越有吸引力。
@@ -16832,6 +16844,47 @@ GCC 6.1 及其后版本支持概念。
 
 动态有助于静态：提供通用的，便利的，静态绑定的接口，但内部进行动态派发，这样就可以提供统一的对象布局。
 这样的例子包括如 `std::shared_ptr` 的删除器的类型擦除。（不过[请勿过度使用类型擦除](#Rt-erasure)。）
+
+    #include <memory>
+
+    class Object {
+    public:
+        template<typename T>
+        Object(T&& obj)
+            : concept_(std::make_shared<ConcreteCommand<T>>(std::forward<T>(obj))) {}
+
+        int get_id() const { return concept_->get_id(); }
+
+    private:
+        struct Command {
+            virtual ~Command() {}
+            virtual int get_id() const = 0;
+        };
+
+        template<typename T>
+        struct ConcreteCommand final : Command {
+            ConcreteCommand(T&& obj) noexcept : object_(std::forward<T>(obj)) {}
+            int get_id() const final { return object_.get_id(); }
+
+        private:
+            T object_;
+        };
+
+        std::shared_ptr<Command> concept_;
+    };
+
+    class Bar {
+    public:
+        int get_id() const { return 1; }
+    };
+
+    struct Foo {
+    public:
+        int get_id() const { return 2; }
+    };
+
+    Object o(Bar{});
+    Object o2(Foo{});
 
 ##### 注解
 
@@ -18800,7 +18853,7 @@ C++ 比 C 的表达能力更强，而且为许多种类的编程都提供了更�
 * [SF.9: 避免源文件的循环依赖](#Rs-cycles)
 * [SF.10: 避免依赖于隐含地 `#include` 进来的名字](#Rs-implicit)
 * [SF.11: 头文件应当是自包含的](#Rs-contained)
-* [SF.12: 如果可以就优先采用角括号形式的 `#include`，其他情况下采用引号模式](#Rs-incform)
+* [SF.12: 对相对于包含文件的文件优先采用引号形式的 `#include`，其他情况下采用角括号形式](#Rs-incform)
 
 * [SF.20: 用 `namespace` 表示逻辑结构](#Rs-namespace)
 * [SF.21: 请勿在头文件中使用无名（匿名）命名空间](#Rs-unnamed)
@@ -19241,7 +19294,7 @@ C++ 比 C 的表达能力更强，而且为许多种类的编程都提供了更�
 
 以一项测试来验证头文件自身可通过编译，或者一个仅包含了该头文件的 cpp 文件可通过编译。
 
-### <a name="Rs-incform"></a>SF.12: 如果可以就优先采用角括号形式的 `#include`，其他情况下采用引号模式
+### <a name="Rs-incform"></a>SF.12: 对相对于包含文件的文件优先采用引号形式的 `#include`，其他情况下采用角括号形式
 
 ##### 理由
 
@@ -19249,19 +19302,20 @@ C++ 比 C 的表达能力更强，而且为许多种类的编程都提供了更�
 使用角括号（`<>`）或引号（`""`）语法的 `#include` 的两种形式的灵活性。
 各厂商利用了这点并采用了不同的搜索算法和指定包含路径的方法。
 
-无论如何，指导方针是尽可能使用角括号形式。这点支持了标准程序库
-头文件必须以此中方式包含的事实，这样做更可能产生可移植代码，
-并允许其他情况下使用引号形式。例如明确头文件相对于包含它的文件的局部性，
-或当需要某种不同的搜索算法的情形。
+无论如何，指导方针是使用引号形式来（从同一个组件或项目中）包含那些存在于某个相对于含有这条 `#include` 语句的文件的相对路径中的文件，其他情况尽可能使用角括号形式。这样做鼓励明确表现出文件与包含它的文件之间的局部性，或当需要某种不同的搜索算法的情形。这样一眼就可以很容易明白头文件是从某个局部相对文件包含的，还是某个标准库头文件或别的搜索路径（比如另一个程序库或一组常用包含路径）中的某个头文件。
 
 ##### 示例
 
-    #include <string>       // 来自标准程序库，规定形式
-    #include "helpers.h"    // 项目特定的文件，使用 "" 形式
+    // foo.cpp:
+    #include <string>                // 来自标准程序库，要求使用 <> 形式
+    #include <some_library/common.h> // 从另一个程序库中包含的，并非出于局部相对位置的文件；使用 <> 形式
+    #include "foo.h"                 // 处于同一项目中局部相对于 foo.cpp 的文件，使用 "" 形式
+    #include "foo_utils/utils.h"     // 处于同一项目中局部相对于 foo.cpp 的文件，使用 "" 形式
 
 ##### 注解
 
 不遵守这条可能会导致很难诊断的错误：由于包含时指定的错误的范围而选择了错误的文件。
+例如，通常 `#include ""` 的搜索算法首先搜索存在于某个局部相对路径中的文件，因此使用这种形式来指代某个并非位于局部相对路径的文件，就一位置一旦在局部相对路径中出现了一个这样的文件（比如进行包含的文件被移动到了别的位置），它就会在原来所包含的文件之前被找到，并使包含文件集合以一种预料之外的方式被改变。
 
 程序库作者们应当把它们的头文件放到一个文件夹中，然后让其客户使用相对路径来包含这些文件：`#include <some_library/common.h>`。
 
@@ -19650,7 +19704,7 @@ We don't consider ???
 注意已经为 `string` 提供了 `>>` 和 `!=`（作为有用操作的例子），并且没有显示的内存分配，
 回收，或者范围检查（`string` 会处理这些）。
 
-C++17 中，我们可以使用 `string_view` 而不是 `const string*` 作为参数，以允许调用方更大的灵活性：
+C++17 中，我们可以使用 `string_view` 而不是 `const string&` 作为参数，以允许调用方更大的灵活性：
 
     vector<string> read_until(string_view terminator)   // C++17
     {
