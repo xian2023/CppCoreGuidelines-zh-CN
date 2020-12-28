@@ -8,7 +8,7 @@
 * [Bjarne Stroustrup](http://www.stroustrup.com)
 * [Herb Sutter](http://herbsutter.com/)
 
-翻译：
+翻译
 
 * 李一楠 (li_yinan AT 163 DOT com)
 
@@ -203,7 +203,7 @@
 当然，对程序员有帮助的任何话题都是可接受的。
 
 我们最初的规则集合强调的是（各种形式的）安全性以及简单性。
-它们有些过于严格了。
+它们也许有些过于严格了。
 我们预期将会引入更多的例外情况， 以便使它们更好地适应现实世界的需要。
 我们也需要更多的规则。
 
@@ -372,9 +372,17 @@
 
     [[gsl::suppress(tag)]]
 
-其中的 "tag" 是包含强制规则的条目的锚定名字（例如，[C.134](#Rh-public) 的锚定名字为 "Rh-public"），
+或可选地带有一条消息（遵循常规的 C++11 标准标注语法）：
+
+    [[gsl::suppress(tag, justification: "message")]]
+
+其中
+
+* `tag` 是包含强制规则的条目的锚定名字（例如，[C.134](#Rh-public) 的锚定名字为 "Rh-public"），
 剖面配置的规则组的名字（如 "type"，"bounds"，或 "lifetime"），
-或者剖面配置中的特定规则（[type.4](#Pro-type-cstylecast) 或 [bounds.2](#Pro-bounds-arrayindex)）。
+或者剖面配置中的特定规则（[type.4](#Pro-type-cstylecast) 或 [bounds.2](#Pro-bounds-arrayindex)）
+
+* `"message"` 是字符串字面量
 
 ## <a name="SS-struct"></a>In.struct: 本文档的结构
 
@@ -404,6 +412,7 @@
 来解释您的关切，亦或一条相应的问题报告。
 
 各个示例用于演示规则。
+
 * 这些示例并非意图具有产品级的质量，或覆盖所有的教学维度。
 例如，许多的例子都是语言技巧，并使用了诸如 `f`，`base`，和 `x` 这样的名字。
 * 我们尝试保证使下文中“好”的示例都遵守《核心指导方针》。
@@ -1496,7 +1505,7 @@ C++ 程序员应当熟知标准库的基本知识，并在适当的时候加以�
 
 ##### 示例，好
 
-`std::chrono::duration` 类型（C++11）可以让时间段的单位明确下来。
+`std::chrono::duration` 类型可以让时间段的单位明确下来。
 
     void blink_led(milliseconds time_to_blink) // 好 -- 单位明确
     {
@@ -1985,7 +1994,7 @@ GCC 6.1 及其后版本支持概念。
 ##### 例外
 
 使用 `zstring` 和 `czstring` 来表示 C 风格的以零终结字符串。
-但这样做时，应当使用 `std::string_view` 或 [GSL](#S-gsl) 中的 `string_span` 以避免范围错误。
+但这样做时，应当使用 `std::string_view` 或 [GSL](#S-gsl) 中的 `span<char>` 以避免范围错误。
 
 ##### 强制实施
 
@@ -2333,9 +2342,9 @@ GCC 6.1 及其后版本支持概念。
 * [F.1: 把有意义的操作“打包”成为精心命名的函数](#Rf-package)
 * [F.2: 一个函数应当实施单一一项逻辑操作](#Rf-logical)
 * [F.3: 保持函数短小简洁](#Rf-single)
-* [F.4: 如果函数必须在编译期进行求值，就将其声明为 `constexpr`](#Rf-constexpr)
+* [F.4: 如果函数可能必须在编译期进行求值，就将其声明为 `constexpr`](#Rf-constexpr)
 * [F.5: 如果函数非常小，并且是时间敏感的，就将其声明为 `inline`](#Rf-inline)
-* [F.6: 如果函数不会抛出异常，就将其声明为 `noexcept`](#Rf-noexcept)
+* [F.6: 如果函数必然不会抛出异常，就将其声明为 `noexcept`](#Rf-noexcept)
 * [F.7: 对于常规用法，应当接受 `T*` 或 `T&` 参数而不是智能指针](#Rf-smart)
 * [F.8: 优先采用纯函数](#Rf-pure)
 * [F.9: 未使用的形参应当没有名字](#Rf-unused)
@@ -2584,7 +2593,7 @@ GCC 6.1 及其后版本支持概念。
 * 标记过于复杂的函数。多复杂算是过于复杂呢？
   应当用圈复杂度来度量。可以试试“多于 10 个逻辑路径”。一个简单的开关算作一条路径。
 
-### <a name="Rf-constexpr"></a>F.4: 如果函数必须在编译期进行求值，就将其声明为 `constexpr`
+### <a name="Rf-constexpr"></a>F.4: 如果函数可能必须在编译期进行求值，就将其声明为 `constexpr`
 
 ##### 理由
 
@@ -2672,7 +2681,7 @@ GCC 6.1 及其后版本支持概念。
 
 对超过三条语句，并且本可以声明为非内联的 `inline` 函数（比如类成员函数）标记为 `inline`。
 
-### <a name="Rf-noexcept"></a>F.6: 如果函数不会抛出异常，就将其声明为 `noexcept`
+### <a name="Rf-noexcept"></a>F.6: 如果函数必然不会抛出异常，就将其声明为 `noexcept`
 
 ##### 理由
 
@@ -2685,7 +2694,7 @@ C++ 标准库隐含地对 C 标准库中的所有函数做了这件事。
 
 ##### 注解
 
-`constexpr` 函数在运行时执行时可能抛出异常，因此可能需要对其中的一些使用 `noexcept`。
+`constexpr` 函数在运行时执行时可能抛出异常，因此可能需要对其中的一些使用有条件 `noexcept`。
 
 ##### 示例
 
@@ -2700,7 +2709,7 @@ C++ 标准库隐含地对 C 标准库中的所有函数做了这件事。
     }
 
 如果 `collect()` 耗光了内存，程序就会崩溃。
-除非这个程序特别精心编写成不会耗尽内存，否则这可能正是正确的方式；
+除非这个程序特别精心编写成不会耗尽内存，否则这也许正是正确的方式；
 `terminate()` 能够产生合适的错误日志信息（但当内存耗尽时是很难做出任何巧妙的事情的）。
 
 ##### 注解
@@ -2709,7 +2718,7 @@ C++ 标准库隐含地对 C 标准库中的所有函数做了这件事。
 注意你的代码的执行环境，尤其是与抛出异常和内存分配
 相关的情形。打算成为完全通用的代码（比如像
 标准库和其他类似的工具代码），应当支持那些
-有意义地处理了 `bad_alloc` 异常的执行环境。
+可以有意义地处理 `bad_alloc` 异常的执行环境。
 不过，大多数程序和执行环境都不能有意义地
 处理内存分配失败，而中止程序则是在这些情况中
 应对分类失败的最干净和最简单的方式。如果已知
@@ -2738,8 +2747,12 @@ C++ 标准库隐含地对 C 标准库中的所有函数做了这件事。
 
 ##### 理由
 
-智能指针的传递会转移或者共享所有权，因此应当仅在有意要实现所有权语义时才能使用（参见 [R.30](#Rr-smartptrparam)）。
+智能指针的传递会转移或者共享所有权，因此应当仅在有意要实现所有权语义时才能使用。
+不操作生存期的函数应当接受原始指针或引用。
+
 使用按智能指针传递方式把函数限制为只能服务于使用智能指针的调用方。
+需要一个 `widget` 的函数应当能够接受任何 `widget` 对象，而不只是由某种特定种类的智能指针管理其生存期的那些。
+
 智能指针的传递（比如 `std::shared_ptr`）暗含了一些运行时成本。
 
 ##### 示例
@@ -2769,24 +2782,45 @@ C++ 标准库隐含地对 C 标准库中的所有函数做了这件事。
         // ...
     };
 
-进一步请参见 [R.30](#Rr-smartptrparam)。
+    // 调用方
+    shared_ptr<widget> my_widget = /* ... */;
+    f(my_widget);
+
+    widget stack_widget;
+    f(stack_widget); // 错误
+
+##### 示例，好
+
+    // 被调用方
+    void f(widget& w)
+    {
+        // ...
+        use(w);
+        // ...
+    };
+
+    // 调用方
+    shared_ptr<widget> my_widget = /* ... */;
+    f(*my_widget);
+
+    widget stack_widget;
+    f(stack_widget); // ok -- 这样就有效了
 
 ##### 注解
 
-悬挂指针是可以静态地找出来的，因此我们并不需要依靠资源管理功能来避免悬挂指针。
+我们可以静态地找出悬挂指针的许多常见情况（参见[生存期安全性剖面配置](#SS-lifetime)）。函数实参天然存活于函数调用的生存期，因而具有更少的生存期问题。
+
+##### 强制实施
+
+* 【简单】若函数接受可复制的智能指针类型（即重载了 `operator->` 或 `operator*`），但该函数仅调用了：`operator*`、`operator->` 或 `get()`，则给出警告。
+  建议代之以 `T*` 或 `T&`。
+* 对于智能指针类型（重载了 `operator->` 或 `operator*` 的类型）的参数，若它是可复制/可移动的，但从没有从函数体中被复制/移动出来，且从未对其进行修改，且未将其传递给会修改它其他函数，对之进行标记。这意味着并未使用其所有权语义。
+  建议代之以 `T*` 或 `T&`。
 
 **参见**
 
 * [当“无实参”是有效情形时，优先采用 `T*` 而不是 `T&`](#Rf-ptr-ref)
 * [智能指针规则概述](#Rr-summary-smartptrs)
-
-##### 强制实施
-
-标记并未使用其所有权语义的智能指针类型（重载了 `operator->` 或 `operator*` 的类型）的参数；
-亦即
-
-* 它是可复制的，但从没有被复制/移动出来，或者它是可移动，但从没有被移动出来
-* 并且从未对其进行修改或者将其传递给会进行修改的其他函数。
 
 ### <a name="Rf-pure"></a>F.8: 优先采用纯函数
 
@@ -2907,7 +2941,7 @@ C++ 标准库隐含地对 C 标准库中的所有函数做了这件事。
 
 返回值优化无法处理赋值的情况，不过移动赋值却可以。
 
-引用是被假定为指代某个有效对象的（语言规则）。
+可以假定引用都指代了某个有效对象（语言规则）。
 “空引用”（正规地说）是不存在的。
 如果要表示一个非强制的值，请使用指针，`std::optional`，或者一个用以代表“没有值”的特殊值。
 
@@ -3242,7 +3276,7 @@ C++98 的标准库已经使用这种风格了，因为 `pair` 就像一种两个
 
 ##### 理由
 
-清晰性。以 `not_null<T>` 为参数的函数很明确地说明，应当由该函数的调用者来负责进行任何必须的 `nullptr` 检查。
+清晰性。以 `not_null<T>` 为参数的函数很明确地说明，应当由该函数的调用者来负责进行任何必要的 `nullptr` 检查。
 相似地，以 `not_null<T>` 为返回值的函数很明确地说明，该函数的调用者无须检查 `nullptr`。
 
 ##### 示例
@@ -3442,7 +3476,7 @@ C 风格的字符串非常普遍。它们是按一种约定方式定义的：就
 
 ##### 注解
 
-构造出一个本质上是 `nullptr` 的引用是可能的，但不是合法的 C++ 代码（比如，`T* p = nullptr; T& r = (T&)*p;`）。
+构造出一个本质上是 `nullptr` 的引用是可能的，但不是合法的 C++ 代码（比如，`T* p = nullptr; T& r = *p;`）。
 这种错误非常罕见。
 
 ##### 注解
@@ -4169,7 +4203,7 @@ C 风格的字符串非常普遍。它们是按一种约定方式定义的：就
 
 ##### 示例
 
-一个重载集合中的一些成员可能不会直接访问 `private` 数据：
+一个重载集合中的一些成员可以不直接访问 `private` 数据：
 
     class Foobar {
     public:
@@ -4182,7 +4216,7 @@ C 风格的字符串非常普遍。它们是按一种约定方式定义的：就
 
 ##### 例外
 
-类似地，一组函数可能被设计为进行链式调用：
+类似地，一组函数可以被设计为进行链式调用：
 
     x.scale(0.5).rotate(45).set_color(Color::red);
 
@@ -4297,7 +4331,7 @@ C 风格的字符串非常普遍。它们是按一种约定方式定义的：就
 
 无论我们在 `//` 部分中干什么，`pair` 的任意用户都可以任意地并且不相关地改动其 `a` 和 `b`。
 在大型代码库中，我们无法轻易找出哪段代码对 `pair` 的成员都做了什么。
-这可能正是我们想要的，但如果想要在成员之间强加某种关系，就需要使它们为 `private`，
+这也许正是我们想要的，但如果想要在成员之间强加某种关系，就需要使它们为 `private`，
 并通过构造函数和成员函数来强加这种关系（不变式）。
 例如：
 
@@ -4539,7 +4573,7 @@ C++ 的内建类型都是正规的，标准库中的类，如 `string`，`vector
 * [C.81: 当需要关闭缺省行为（且不需要替代的行为）时，使用 `=delete`](#Rc-delete)
 * [C.82: 不要在构造函数和析构函数中调用虚函数](#Rc-ctor-virtual)
 * [C.83: 考虑为值类型提供 `noexcept` 的 `swap` 函数](#Rc-swap)
-* [C.84: `swap` 不应当失败](#Rc-swap-fail)
+* [C.84: `swap` 不能失败](#Rc-swap-fail)
 * [C.85: 使 `swap` 函数 `noexcept`](#Rc-swap-noexcept)
 * [C.86: 使 `==` 对操作数的类型对称，并使之 `noexcept`](#Rc-eq)
 * [C.87: 请当心基类的 `==`](#Rc-eq-base)
@@ -4873,7 +4907,7 @@ C++ 的内建类型都是正规的，标准库中的类，如 `string`，`vector
 
 ##### 示例
 
-指针成员可能表示某种资源。
+指针成员可以表示某种资源。
 [不应该这样使用 `T*`](#Rr-ptr)，但老代码中这是很常见的。
 请把 `T*` 当作一种可能的所有者的嫌疑。
 
@@ -5623,7 +5657,7 @@ C++11 的初始化式列表规则免除了对许多构造函数的需求。例�
 
 ##### 示例，更好的做法
 
-可以使用 `gsl::string_span` 或者（C++17 中的）`std::string_view` 代替这些 `const char*`
+可以使用 C++17 的 `std::string_view` 或 `gsl::span<char>` 代替这些 `const char*`
 来作为[一种表示函数实参的更通用的方式](#Rstr-view)：
 
     class D {   // 好
@@ -6406,10 +6440,10 @@ ISO 标准中对标准库容器类仅仅保证了“有效但未指明”的状�
 
 ##### 强制实施
 
-* 【简单】 没有虚函数的类应当声明 `swap` 成员函数。
+* 可非平凡复制的值类型应当提供成员 `swap` 或自由 `swap` 函数的重载。
 * 【简单】 当类带有 `swap` 成员函数时，它应当被声明为 `noexcept`。
 
-### <a name="Rc-swap-fail"></a>C.84: `swap` 函数不应当失败
+### <a name="Rc-swap-fail"></a>C.84: `swap` 函数不能失败
 
 ##### 理由
 
@@ -6434,7 +6468,7 @@ ISO 标准中对标准库容器类仅仅保证了“有效但未指明”的状�
 
 ##### 理由
 
-[`swap` 不应当失败](#Rc-swap-fail)。
+[`swap` 不能失败](#Rc-swap-fail)。
 如果 `swap` 试图用异常来退出的话，这就是严重的设计错误，程序最好理解终止 terminate。
 
 ##### 强制实施
@@ -7163,7 +7197,7 @@ Lambda 表达式（通常通俗地简称为“lambda”）是一种产生函数�
 问题：
 
 * 随着类层次的增长和向 `Shape` 添加更多的数据，构造函数会越发难于编写和维护。
-* 为什么要计算 `Triangle` 的中心点？我们从不用它。
+* 为什么要计算 `Triangle` 的中心点？我们也许从不用它。
 * 向 `Shape` 添加新的数据成员（比如绘制风格或者画布）
 将导致所有派生于 `Shape` 的类和所有使用 `Shape` 的代码都需要进行复审，可能需要修改，而且很可能需要重新编译。
 
@@ -7987,56 +8021,11 @@ B 类别中的数据成员应当为 `private` 或 `const`。这是因为封装�
 
 ### <a name="Rh-make_unique"></a>C.150: 用 `make_unique()` 来构建由 `unique_ptr` 所拥有的对象
 
-##### 理由
-
-`make_unique` 为构造提供了更精炼的语句。
-它也保证了复杂表达式中的异常安全性。
-
-##### 示例
-
-    unique_ptr<Foo> p {new Foo{7}};    // OK: 不过有重复
-
-    auto q = make_unique<Foo>(7);      // 有改善: 并未重复 Foo
-
-    // 非异常安全: 编译器可能如下交错进行各参数的计算:
-    //
-    // 1. 为 Foo 分配内存
-    // 2. 构造 Foo
-    // 3. 调用 bar
-    // 4. 构造 unique_ptr<Foo>
-    //
-    // 如果 bar 抛出了异常，Foo 就不会被销毁，而为其所分配的内存则会泄漏。
-    f(unique_ptr<Foo>(new Foo()), bar());
-
-    // 异常安全: 各函数调用无法互相交错。
-    f(make_unique<Foo>(), bar());
-
-##### 强制实施
-
-* 标记模板特化列表 `<Foo>` 的重复使用。
-* 标记声明为 `unique_ptr<Foo>` 的变量。
+参见 [R.23](#Rr-make_unique)。
 
 ### <a name="Rh-make_shared"></a>C.151: 用 `make_shared()` 来构建由 `shared_ptr` 所拥有的对象
 
-##### 理由
-
-`make_shared` 为构造提供了更精炼的语句。
-它也提供了一个机会，通过把 `shared_ptr` 的使用计数和对象相邻放置，来消除为引用计数进行独立的内存分配操作。
-
-##### 示例
-
-    void test()
-    {
-        // OK: 但出现重复；而且为这个 Bar 和 shared_ptr 的使用计数分别进行了分配
-        shared_ptr<Bar> p {new Bar{7}};
-
-        auto q = make_shared<Bar>(7);   // 有改善: 并未重复 Bar；只有一个对象
-    }
-
-##### 强制实施
-
-* 标记模板特化列表 `<Bar>` 的重复使用。
-* 标记声明为 `shared_ptr<Bar>` 的变量。
+参见 [R.22](#Rr-make_shared)。
 
 ### <a name="Rh-array"></a>C.152: 禁止把指向派生类对象的数组的指针赋值给指向基类的指针
 
@@ -8280,7 +8269,7 @@ B 类别中的数据成员应当为 `private` 或 `const`。这是因为封装�
         swap(a, b);   // 调用了 N::swap
     }
 
-但这也不是我们在泛型代码中所要的。
+但这也许并不是我们在泛型代码中所要的。
 通常如果专门的函数存在的话我们就想用它，否则的话我们则需要通用的函数。
 这是通过在函数的查找中包含通用函数而达成的：
 
@@ -8999,7 +8988,7 @@ C++17 引入了一个独立类型 `std::byte` 以支持在原始对象表示上�
 
 本章节中包含于资源相关的各项规则。
 资源，就是任何必须进行获取，并（显式或隐式）进行释放的东西，比如内存、文件句柄、Socket 和锁等等。
-其必须进行释放的原因在于它们是短缺的，因而即便是采用延迟释放也是有害的。
+其必须进行释放的原因在于它们是短缺的，因而即便是采用延迟释放也许也是有害的。
 基本的目标是要确保不会泄漏任何资源，而且不会持有不在需要的任何资源。
 负责释放某个资源的实体被称作是其所有者。
 
@@ -9054,7 +9043,7 @@ C++ 语言确保的构造函数/析构函数对称性，反映了资源的获取
 
 考虑：
 
-    void send(X* x, cstring_span destination)
+    void send(X* x, string_view destination)
     {
         auto port = open_port(destination);
         my_mutex.lock();
@@ -9073,7 +9062,7 @@ C++ 语言确保的构造函数/析构函数对称性，反映了资源的获取
 
 考虑：
 
-    void send(unique_ptr<X> x, cstring_span destination)  // x 拥有这个 X
+    void send(unique_ptr<X> x, string_view destination)  // x 拥有这个 X
     {
         Port port{destination};            // port 拥有这个 PortHandle
         lock_guard<mutex> guard{my_mutex}; // guard 拥有这个锁
@@ -9089,7 +9078,7 @@ C++ 语言确保的构造函数/析构函数对称性，反映了资源的获取
     class Port {
         PortHandle port;
     public:
-        Port(cstring_span destination) : port{open_port(destination)} { }
+        Port(string_view destination) : port{open_port(destination)} { }
         ~Port() { close_port(port); }
         operator PortHandle() { return port; }
 
@@ -9138,7 +9127,7 @@ C 风格的字符串是以单个指向以零结尾的字符序列的指针来传
 ##### 注解
 
 当前许多的单元素指针的用法其实都应当用引用。
-不过，如果 `nullptr` 是可能的值的话，引用就不是合理的替代方案了。
+不过，如果 `nullptr` 是可能的值的话，也许引用就不是合理的替代方案了。
 
 ##### 强制实施
 
@@ -9369,7 +9358,7 @@ C 风格的字符串是以单个指向以零结尾的字符序列的指针来传
 
 大型程序中，裸露的 `delete`（即出现于应用程序代码中，而不是专门进行资源管理的代码中）
 很可能是一个 BUG：如果已经有了 N 个 `delete` 的话，怎么确定我们需要的不是 N+1 或者 N-1 个呢？
-这种 BUG 可能会潜伏起来：它可能只会在维护过程中暴露出来。
+这种 BUG 可能会潜伏起来：它也许只会在维护过程中才暴露出来。
 如果出现了裸露的 `new`，那就可能在别的什么地方需要一个裸露的 `delete`，因而可能也是一个 BUG。
 
 ##### 强制实施
@@ -9551,7 +9540,8 @@ C 风格的字符串是以单个指向以零结尾的字符序列的指针来传
 
 ##### 理由
 
-如果先创建对象再将其传给 `shared_ptr` 的构造函数的话，（最大可能是）比用 `make_shared()` 时多进行一次分配（以及随后的回收），这是因为引用计数只能和对象分开进行分配。
+`make_shared` 为构造提供了更精炼的语句。
+它也提供了一个机会，通过把 `shared_ptr` 的使用计数和对象相邻放置，来消除为引用计数进行独立的内存分配操作。
 
 ##### 示例
 
@@ -9570,11 +9560,14 @@ C 风格的字符串是以单个指向以零结尾的字符序列的指针来传
 
 ##### 理由
 
-编码便利以及和 `shared_ptr` 保持一致。
+`make_unique` 为构造提供了更精炼的语句。
+它也保证了复杂表达式中的异常安全性。
 
-##### 注解
+##### 示例
 
-`make_unique()` 是 C++14 中的，不过已经广泛可用（而且也很容易编写）。
+    unique_ptr<Foo> p {new Foo{7}};    // OK: 不过有重复
+
+    auto q = make_unique<Foo>(7);      // 有改善: 并未重复 Foo
 
 ##### 强制实施
 
@@ -9629,52 +9622,7 @@ C 风格的字符串是以单个指向以零结尾的字符序列的指针来传
 
 ### <a name="Rr-smartptrparam"></a>R.30: 以智能指针为参数，仅用于明确表达生存期语义
 
-##### 理由
-
-如果函数仅仅需要 `widget` 自身的话，接受一个 `widget` 的智能指针就是错误的。
-它应当可以接受任何 `widget` 对象，而不仅是那些由特定种类的智能指针管理其生存期的对象才对。
-不会操纵对象生存期的函数应当接受原生的指针或引用。
-
-##### 示例，不好
-
-    // 被调用方
-    void f(shared_ptr<widget>& w)
-    {
-        // ...
-        use(*w); // w 的唯一使用 -- 完全没有用到其生存期
-        // ...
-    };
-
-    // 调用方
-    shared_ptr<widget> my_widget = /* ... */;
-    f(my_widget);
-
-    widget stack_widget;
-    f(stack_widget); // 错误
-
-##### 示例，好
-
-    // 被调用方
-    void f(widget& w)
-    {
-        // ...
-        use(w);
-        // ...
-    };
-
-    // 调用方
-    shared_ptr<widget> my_widget = /* ... */;
-    f(*my_widget);
-
-    widget stack_widget;
-    f(stack_widget); // ok -- 现在没问题了
-
-##### 强制实施
-
-* 【简单】 如果函数接受可以复制的智能指针类型（重载了 `operator->` 或者 `operator*`）的参数，但仅调用了它的 `operator*`，`operator->` 或者 `get()` 的话，就给出警告。
-  建议代之以 `T*` 或 `T&`。
-* 如果智能指针类型（即重载了 `operator->` 或 `operator*` 的类型）的参数是可以复制/移动的，但并未从函数体中复制或移动出去，同时它未被改动，而且也未被传递给可能做这些事的其他函数的话，就对其进行标记。这些意味着它的所有权语义并未被用到。
-  建议代之以 `T*` 或 `T&`。
+参见 [F.7](#Rf-smart)。
 
 ### <a name="Rr-smart"></a>R.31: 非 `std` 的智能指针，应当遵循 `std` 的行为模式
 
@@ -9960,7 +9908,7 @@ C 风格的字符串是以单个指向以零结尾的字符序列的指针来传
 * [ES.102: 使用有符号类型进行算术运算](#Res-signed)
 * [ES.103: 避免上溢出](#Res-overflow)
 * [ES.104: 避免下溢出](#Res-underflow)
-* [ES.105: 避免除零](#Res-zero)
+* [ES.105: 避免除整数零](#Res-zero)
 * [ES.106: 不要试图用 `unsigned` 来防止负数值](#Res-nonnegative)
 * [ES.107: 不要对下标使用 `unsigned`，优先使用 `gsl::index`](#Res-subscripts)
 
@@ -10844,13 +10792,13 @@ C++17 的规则多少会少些意外：
 
 ##### 强制实施
 
-寻找作为 `new`，`malloc()`，或者可能返回这类指针的函数的目标的原生指针。
+寻找作为这些函数的目标的原生指针：`new`，`malloc()`，或者可能返回这类指针的函数。
 
 ### <a name="Res-const"></a>ES.25: 应当将对象声明为 `const` 或 `constexpr`，除非后面需要修改其值
 
 ##### 理由
 
-这样的话你就不会误改掉这个值。而且这种方式可能给编译器的优化带来机会。
+这样的话你就不会误改掉这个值。而且这种方式可能会给编译器的带来优化机会。
 
 ##### 示例
 
@@ -10884,7 +10832,7 @@ C++17 的规则多少会少些意外：
 
 +##### 注解
 
-你可能想把一个缓冲区当做暂存器来重复使用以作为一种优化措施，但即便如此也请尽可能限定该变量的作用域，还要当心不要导致由于遗留在重用的缓冲区中的数据而引发的 BUG，这是安全性 BUG 的一种常见来源。
+也许你想把一个缓冲区当做暂存器来重复使用以作为一种优化措施，但即便如此也请尽可能限定该变量的作用域，还要当心不要导致由于遗留在重用的缓冲区中的数据而引发的 BUG，这是安全性 BUG 的一种常见来源。
 
     void write_to_file()
     {
@@ -11497,7 +11445,7 @@ C++17 收紧了有关求值顺序的规则
 ##### 理由
 
 你没办法搞清楚这种代码会做什么。可移植性。
-即便它做到了对你可能有意义的事情，它可能在别的编译器（比如你的编译器的下个版本）或者不同的优化设置中作出不同的事情。
+即便它做到了对你可能有意义的事情，它在别的编译器（比如你的编译器的下个版本）或者不同的优化设置中也可能会做出不同的事情。
 
 ##### 注解
 
@@ -11688,13 +11636,13 @@ C++17 收紧了有关求值顺序的规则，但函数实参求值顺序仍然�
 才能把设备寄存器的地址放入一个指针呢？然而，强制转换
 却被严重过度使用了，而且也是一种主要的错误来源。
 
-##### 注解
-
 当你觉得需要进行大量强制转换时，可能存在一个基本的设计问题。
 
-##### 例外
+[类型剖面配置](#Pro-type-reinterpretcast) 禁止使用 `reinterpret_cast` 和 C 风格强制转换。
 
-【强制转换为 `(void)`】是由标准认可的关闭 `[[nodiscard]]` 警告的方法。当调用带有 `[[nodiscard]]` 返回的函数而你又有意要丢弃其返回值时，应当首先深入思考这是不是确实是个好主意（通常，这个函数或者使用了 `[[nodiscard]]` 的返回类型的作者，当初确实是有充分理由的），但要是你仍然觉得这样做是合适的，而且你的代码评审者也同意的话，就可以写出 `(void)` 来关闭这个警告。
+不要以强制转换为 `(void)` 来忽略 `[[nodiscard]]` 返回值。
+当你有意要丢弃这种返回值时，应当首先深入思考这是不是确实是个好主意（通常，这个函数或者使用了 `[[nodiscard]]` 的返回类型的作者，当初确实是有充分理由的）。
+要是你仍然觉得这样做是合适的，而且你的代码评审者也同意的话，使用 `std::ignore =` 来关闭这个警告，这既简单，可移植，也易于 grep。
 
 ##### 替代方案
 
@@ -11703,14 +11651,14 @@ C++17 收紧了有关求值顺序的规则，但函数实参求值顺序仍然�
 * 使用模板
 * 使用 `std::variant`
 * 借助良好定义的，安全的，指针类型之间的隐式转换
+* 使用 `std::ignore =` 来忽略 `[[nodiscard]]` 值
 
 ##### 强制实施
 
-* 除了将 `[[nodiscard]]` 函数的返回值强制转换为 `void` 之外，强行消除 C 风格的强制转换。
-* 当存在许多函数风格的强制转换时给出警告（显而易见的问题是如何量化“许多”）。
-* [类型剖面配置](#Pro-type-reinterpretcast)禁用了 `reinterpret_cast`。
-* 对指针类型之间的[同一强制转换](#Pro-type-identitycast)给出警告，这之中的源类型和目标类型相同(#Pro-type-identitycast)。
-* 当指针强制转换可以为[隐式转换](#Pro-type-implicitpointercast)时给出警告。
+* 对包括向 `void` 在内的所有 C 风格强制转换进行标记。
+* 对使用 `Type(value)` 的函数风格强制转换进行标记。应代之以使用不会发生窄化的 `Type{value}`。（参见 [ES.64](#Res-construct)。）
+* 对指针类型之间的[同一强制转换](#Pro-type-identitycast)，若其中的源类型和目标类型相同(#Pro-type-identitycast)则进行标记。
+* 对可以作为[隐式转换](#Pro-type-implicitpointercast)的显示指针强制转换进行标记。
 
 ### <a name="Res-casts-named"></a>ES.49: 当必须使用强制转换时，使用具名的强制转换
 
@@ -11770,7 +11718,8 @@ C 风格的强制转换很危险，因为它可以进行任何种类的转换，
 
 ##### 强制实施
 
-* 对 C 风格和函数式的强制转换进行标记。
+* 对包括向 `void` 在内的所有 C 风格强制转换进行标记。
+* 对使用 `Type(value)` 的函数风格强制转换进行标记。应代之以使用不会发生窄化的 `Type{value}`。（参见 [ES.64](#Res-construct)。）
 * [类型剖面配置](#Pro-type-reinterpretcast)禁用了 `reinterpret_cast`。
 * [类型剖面配置](#Pro-type-arithmeticcast)对于在算术类型之间使用 `static_cast` 时给出警告。
 
@@ -11845,7 +11794,7 @@ C 风格的强制转换很危险，因为它可以进行任何种类的转换，
         Bar my_bar;
 
         template<class T>           // 好，推断出 T 是 const 还是非 const
-        static auto get_bar_impl(T& t) -> decltype(t.get_bar())
+        static auto& get_bar_impl(T& t)
             { /* 获取 my_bar 的可能为 const 的引用前后的复杂逻辑 */ }
     };
 
@@ -12446,7 +12395,7 @@ C 风格的强制转换很危险，因为它可以进行任何种类的转换，
 * 当对指向已经超出作用域的对象的指针进行解引用时进行标记
 * 当对可能已经通过赋值 `nullptr` 而无效的指针进行解引用时进行标记
 * 当对可能已经因 `delete` 而无效的指针进行解引用时进行标记
-* 当对指向已经失效的容器元素的的指针进行解引用时进行标记
+* 当对指向可能已经失效的容器元素的指针进行解引用时进行标记
 
 
 ## ES.stmt: 语句
@@ -12522,7 +12471,7 @@ C 风格的强制转换很危险，因为它可以进行任何种类的转换，
             cout << v[i] << '\n';
     }
 
-人类或优良的静态分析器可以确定，其实在 `f(v, &v[i])` 中的 `v` 的上并不真的存在副作用，因此这个循环可以被重写。
+人类或优良的静态分析器也许可以确定，其实在 `f(v, &v[i])` 中的 `v` 的上并不真的存在副作用，因此这个循环可以被重写。
 
 在循环体中“混入循环变量”的情况通常是最好进行避免的。
 
@@ -12808,7 +12757,6 @@ C 风格的强制转换很危险，因为它可以进行任何种类的转换，
     }
 
 在 `case` 标签中使用返回语句也是可以的：
-
     switch (x) {
     case 'a':
         return 1;
@@ -12889,7 +12837,7 @@ C 风格的强制转换很危险，因为它可以进行任何种类的转换，
         }
     }
 
-如果没有 `default` 的话，维护者以及编译器可能会合理地假定你有意处理了所有情况：
+如果没有 `default` 的话，维护者以及编译器可能会合理地假定你有意处理所有情况：
 
     void f2(E x)
     {
@@ -13204,22 +13152,21 @@ C 风格的强制转换很危险，因为它可以进行任何种类的转换，
 ##### 示例，不好
 
     int a[10];
-    a[10] = 7;   // 不好
+    a[10] = 7;   // 不好，数组边界上溢出
 
-    int n = 0;
-    while (n++ < 10)
-        a[n - 1] = 9; // 不好（两次）
+    for (int n = 0; n <= 10; ++n)
+        a[n] = 9;   // 不好，数组边界上溢出
 
 ##### 示例，不好
 
     int n = numeric_limits<int>::max();
-    int m = n + 1;   // 不好
+    int m = n + 1;   // 不好，数值上溢出
 
 ##### 示例，不好
 
     int area(int h, int w) { return h * w; }
 
-    auto a = area(10'000'000, 100'000'000);   // 不好
+    auto a = area(10'000'000, 100'000'000);   // 不好，数值上溢出
 
 ##### 例外
 
@@ -13254,7 +13201,7 @@ C 风格的强制转换很危险，因为它可以进行任何种类的转换，
 
 ???
 
-### <a name="Res-zero"></a>ES.105: 避免除零
+### <a name="Res-zero"></a>ES.105: 避免除整数零
 
 ##### 理由
 
@@ -13266,7 +13213,7 @@ C 风格的强制转换很危险，因为它可以进行任何种类的转换，
 
 ##### 示例，不好
 
-    double divide(int a, int b)
+    int divide(int a, int b)
     {
         // 不好, 应当进行检查（比如一条前条件）
         return a / b;
@@ -13274,17 +13221,17 @@ C 风格的强制转换很危险，因为它可以进行任何种类的转换，
 
 ##### 示例，好
 
-    double divide(int a, int b)
+    int divide(int a, int b)
     {
         // 好, 通过前条件进行处置（并当 C++ 支持契约后可以进行替换）
         Expects(b != 0);
         return a / b;
     }
 
-    double divide(int a, int b)
+    double divide(double a, double b)
     {
-        // 好, 通过检查进行处置
-        return b ? a / b : quiet_NaN<double>();
+        // 好, 通过换为使用 double 来处置
+        return a / b;
     }
 
 **替代方案**: 对于可以负担一些开销的关键应用，可以使用带有范围检查的整数和/或浮点类型。
@@ -15242,7 +15189,7 @@ C++ 对此的机制是 `atomic` 类型：
         }
     }
 
-这对于正确调校的内存顺序会带来好处，其中的获取加载要比顺序一致性加载更加高效
+这对于正确调校的内存顺序可能会带来好处，其中的获取加载要比顺序一致性加载更加高效
 
     mutex action_mutex;
     atomic<bool> action_needed;
@@ -16335,7 +16282,7 @@ C 风格的错误处理就是基于全局变量 `errno` 的，因此基本上不
 
 ##### 注解
 
-当不会抛出异常时，请使用 [`noexcept`](#Re-noexcept) 或其等价的 `throw()`。
+当不会抛出异常时，请使用 [`noexcept`](#Re-noexcept)。
 
 ##### 强制实施
 
@@ -16737,7 +16684,7 @@ GCC 6.1 及其后版本支持概念。
 ##### 强制实施
 
 * 对带有“过于简单”的要求（诸如不用概念而直接使用特定的运算符）的算法进行标记。
-* 不要对“过于简单”的概念本身进行标记；它们可能只不过是更有用的概念的构造块。
+* 不要对“过于简单”的概念本身进行标记；它们也许只不过是更有用的概念的构造块。
 
 ### <a name="Rt-algo"></a>T.2: 用模板来表达适用于许多参数类型的算法
 
@@ -17269,7 +17216,7 @@ GCC 6.1 及其后版本支持概念。
 
 这是一种数学意义上的公理：可以假定成立而无需证明。
 通常公理是无法证明的，而即便可以证明，通常也超出了编译器的能力。
-一条公理可能并非是通用的，不过模板作者可以假定其对于其所实际使用的所有输入均成立（类似于一种前条件）。
+一条公理也许并不是通用的，不过模板作者可以假定其对于其所实际使用的所有输入均成立（类似于一种前条件）。
 
 ##### 注解
 
@@ -17657,7 +17604,7 @@ Lambda 会生成函数对象。
 
 ##### 注解
 
-既然你可以轻易写出 `make_T` 函数，编译器也可以。以后 `make_T` 函数将会变得多余。
+既然你可以轻易写出 `make_T` 函数，编译器也可以。以后 `make_T` 函数也许将会变得多余。
 
 ##### 例外
 
@@ -17697,8 +17644,6 @@ Lambda 会生成函数对象。
         X& operator=(X&&) noexcept;
         ~X();
         // ... 没有别的构造函数了 ...
-
-        // ...
     };
 
     X x {1};    // 没问题
@@ -18843,7 +18788,7 @@ C++ 比 C 的表达能力更强，而且为许多种类的编程都提供了更�
 源文件规则概览：
 
 * [SF.1: 如果你的项目还未采用别的约定的话，应当为代码文件使用后缀 `.cpp`，而对接口文件使用后缀 `.h`](#Rs-file-suffix)
-* [SF.2: `.h` 文件不应当包含对象定义或非内联的函数定义](#Rs-inline)
+* [SF.2: `.h` 文件不能含有对象定义或非内联的函数定义](#Rs-inline)
 * [SF.3: 对在多个源文件中使用的任何声明，都应使用 `.h` 文件](#Rs-declaration-header)
 * [SF.4: 在文件中的其他所有声明之前包含 `.h` 文件](#Rs-include-order)
 * [SF.5: `.cpp` 文件必须包含定义了它的接口的一个或多个 `.h` 文件](#Rs-consistency)
@@ -18879,7 +18824,7 @@ C++ 比 C 的表达能力更强，而且为许多种类的编程都提供了更�
 本文档中我们把 `.h` 和 `.cpp` 作为头文件和实现文件的简便提法，
 虽然实际上的扩展名可能是不同的。
 
-你的 IDE（如果你使用的话）可能对后缀有较强的倾向。
+也许你的 IDE（如果你使用的话）对后缀有较强的倾向。
 
 ##### 示例
 
@@ -18906,7 +18851,7 @@ C++ 比 C 的表达能力更强，而且为许多种类的编程都提供了更�
 * 对不符合约定的文件名进行标记。
 * 检查 `.h` 和 `.cpp`（或等价文件）遵循下列各规则。
 
-### <a name="Rs-inline"></a>SF.2: `.h` 文件不应当包含对象定义或非内联的函数定义
+### <a name="Rs-inline"></a>SF.2: `.h` 文件不能含有对象定义或非内联的函数定义
 
 ##### 理由
 
@@ -19311,6 +19256,7 @@ C++ 比 C 的表达能力更强，而且为许多种类的编程都提供了更�
     #include <some_library/common.h> // 从另一个程序库中包含的，并非出于局部相对位置的文件；使用 <> 形式
     #include "foo.h"                 // 处于同一项目中局部相对于 foo.cpp 的文件，使用 "" 形式
     #include "foo_utils/utils.h"     // 处于同一项目中局部相对于 foo.cpp 的文件，使用 "" 形式
+    #include <component_b/bar.h>     // 通过搜索路径定位到的处于同一项目中的文件，使用 <> 形式
 
 ##### 注解
 
@@ -19659,7 +19605,7 @@ C 数组不那么安全，而且相对于 `array` 和 `vector` 也没有什么�
 
 文本处理是一个大的主题。
 `std::string` 无法全部覆盖这些。
-这一部分主要尝试澄清 `std::string` 和 `char*`、`zstring`、`string_view` 和 `gsl::string_span` 之间的关系。
+这一部分主要尝试澄清 `std::string` 和 `char*`、`zstring`、`string_view` 和 `gsl::span<char>` 之间的关系。
 有关非 ASCII 字符集和编码的重要问题（比如 `wchar_t`，Unicode，以及 UTF-8 等）将在别处讨论。
 
 **参见**：[正则表达式](#SS-regex)
@@ -19670,13 +19616,13 @@ We don't consider ???
 字符串概览：
 
 * [SL.str.1: 使用 `std::string` 以拥有字符序列](#Rstr-string)
-* [SL.str.2: 使用 `std::string_view` 或 `gsl::string_span` 以指代字符序列](#Rstr-view)
+* [SL.str.2: 使用 `std::string_view` 或 `gsl::span<char>` 以指代字符序列](#Rstr-view)
 * [SL.str.3: 使用 `zstring` 或 `czstring` 以指代 C 风格、以零结尾的字符序列](#Rstr-zstring)
 * [SL.str.4: 使用 `char*` 以指代单个字符](#Rstr-char*)
 * [SL.str.5: 使用 `std::byte` 以指代并不必须表示字符的字节值](#Rstr-byte)
 
 * [SL.str.10: 当需要实施相关于文化地域的操作时，使用 `std::string`](#Rstr-locale)
-* [SL.str.11: 当需要改动字符串时，使用 `gsl::string_span` 而不是 `std::string_view`](#Rstr-span)
+* [SL.str.11: 当需要改动字符串时，使用 `gsl::span<char>` 而不是 `std::string_view`](#Rstr-span)
 * [SL.str.12: 为作为标准库的 `string` 类型的字符串字面量使用后缀 `s`](#Rstr-s)
 
 **参见**：
@@ -19714,16 +19660,6 @@ C++17 中，我们可以使用 `string_view` 而不是 `const string&` 作为参
         return res;
     }
 
-`gsl::string_span` 是当前的一种替代方案，为简单的例子提供了 `std::string_view` 的大多数优势：
-
-    vector<string> read_until(string_span terminator)
-    {
-        vector<string> res;
-        for (string s; cin >> s && s != terminator; ) // 读取一个单词
-            res.push_back(s);
-        return res;
-    }
-
 ##### 示例，不好
 
 不要使用 C 风格的字符串来进行需要不单纯的内存管理的操作：
@@ -19754,18 +19690,18 @@ C++17 中，我们可以使用 `string_view` 而不是 `const string&` 作为参
 
 ???
 
-### <a name="Rstr-view"></a>SL.str.2: 使用 `std::string_view` 或 `gsl::string_span` 以指代字符序列
+### <a name="Rstr-view"></a>SL.str.2: 使用 `std::string_view` 或 `gsl::span<char>` 以指代字符序列
 
 ##### 理由
 
-`std::string_view` 或 `gsl::string_span` 提供了简易且（潜在）安全的对字符序列的访问，并与序列的
+`std::string_view` 或 `gsl::span<char>` 提供了简易且（潜在）安全的对字符序列的访问，并与序列的
 分配和存储方式无关。
 
 ##### 示例
 
-    vector<string> read_until(string_span terminator);
+    vector<string> read_until(string_view terminator);
 
-    void user(zstring p, const string& s, string_span ss)
+    void user(zstring p, const string& s, string_view ss)
     {
         auto v1 = read_until(p);
         auto v2 = read_until(s);
@@ -19845,7 +19781,7 @@ C++17 中，我们可以使用 `string_view` 而不是 `const string&` 作为参
 
 ##### 替代方案
 
-参见 [`zstring`](#Rstr-zstring)，[`string`](#Rstr-string)，以及 [`string_span`](#Rstr-view)。
+参见 [`zstring`](#Rstr-zstring)，[`string`](#Rstr-string)，以及 [`string_view`](#Rstr-view)。
 
 ##### 强制实施
 
@@ -19889,7 +19825,7 @@ C++17
 
 ???
 
-### <a name="Rstr-span"></a>SL.str.11: 当需要改动字符串时，使用 `gsl::string_span` 而不是 `std::string_view`
+### <a name="Rstr-span"></a>SL.str.11: 当需要改动字符串时，使用 `gsl::span<char>` 而不是 `std::string_view`
 
 ##### 理由
 
@@ -20024,7 +19960,7 @@ I/O 流规则概览：
 
 `gets()`，使用 `%s` 的 `scanf()`，和使用 `%s` 的 `printf()` 在安全性方面冒风险（容易遭受缓冲区溢出问题而且通常很易错）。
 C11 定义了一些“可选扩展”，它们对其实参进行一些额外检查。
-如果您的 C 程序库中包含 `gets_s()`、`scanf_s()` 和 `printf_s()`，它们将会是更安全的替代方案，但仍然并非是类型安全的。
+如果您的 C 程序库中包含 `gets_s()`、`scanf_s()` 和 `printf_s()`，它们也许是更安全的替代方案，但仍然并非是类型安全的。
 
 ##### 强制实施
 
@@ -20162,7 +20098,7 @@ C 标准库规则概览：
 即便是今天，仍有一些情况下这些规则是有意义的。
 比如说，缺少合适的工具支持会导致异常在硬实时系统中的不适用，
 但请不要盲目地信任“通俗智慧”（比如有关“效率”的未经数据支持的观点）；
-这种“智慧”可能是基于几十年前的信息，或者是来自于与 C++ 有非常不同性质的语言的经验
+这种“智慧”也许是基于几十年前的信息，或者是来自于与 C++ 有非常不同性质的语言的经验
 （比如 C 或者 Java）。
 
 对于这些伪规则的替代方案的正面观点都在各个规则的“替代方案”部分中给出。
@@ -20575,19 +20511,19 @@ C 标准库规则概览：
 * [GCC Coding Conventions](https://gcc.gnu.org/codingconventions.html).
   C++03 以及（相当）一部分向后兼容。
 * [Google C++ Style Guide](https://google.github.io/styleguide/cppguide.html).
-  面向 C++03 和（同样）较老的代码库。Google 的专家们现在正展开活跃的合作，以改进这里的各项指导方针，有希望能够合并这些成果，以使它们能够成为他们也同样推荐采纳的一组现代的通用指导方针。
+  面向 C++17 和（同样）较老的代码库。Google 的专家们现在正展开活跃的合作，以改进这里的各项指导方针，有希望能够合并这些成果，以使它们能够成为他们也同样推荐采纳的一组现代的通用指导方针。
 * [JSF++: JOINT STRIKE FIGHTER AIR VEHICLE C++ CODING STANDARDS](http://www.stroustrup.com/JSF-AV-rules.pdf).
   文档编号 2RDU00001 Rev C. December 2005.
   针对飞行控制软件。
   针对硬实时。
   这意味着它需要非常多的限制（“程序如果发生故障就会有人挂掉”）。
-  例如，飞机起飞后禁止进行自由存储的分配和回收（禁止内存溢出并禁止发生碎片化）。
+  例如，飞机起飞后禁止进行任何自由存储的分配和回收（禁止内存溢出并禁止发生碎片化）。
   禁止使用异常（因为没有可用工具可以保证异常能够在固定的短时间段内被处理）。
   所使用的程序库必须是已被证明可以用于关键任务应用的。
   它和这个指导方针集合的相似性并不让人惊讶，因为 Bjarne Stroustrup 正是 JSF++ 的作者之一。
   建议采纳，但请注意其非常特定的关注领域。
 * [MISRA C++ 2008: Guidelines for the use of the C++ language in critical systems] (https://www.misra.org.uk/Buyonline/tabid/58/Default.aspx)。
-* [Mozilla Portability Guide](https://developer.mozilla.org/en-US/docs/Mozilla/C%2B%2B_Portability_Guide).
+* [Using C++ in Mozilla Code](https://firefox-source-docs.mozilla.org/code-quality/coding-style/using_cxx_in_firefox_code.html).
   如其名称所示，它关注于跨许多（老）编译器的兼容性。
   因此，它是很具有限制性的。
 * [Geosoft.no: C++ Programming Style Guidelines](http://geosoft.no/development/cppstyle.html).
@@ -20727,7 +20663,7 @@ CppCon 的展示的幻灯片是可以获得的（其链接，还有上传的视�
 而遵从的代码则可以认为对于该剖面配置的目标安全属性来说是安全的。
 遵从的代码不会成为这种性质的错误的根本原因，
 虽然程序中可能从其他的代码引入这样的错误。
-一个剖面配置还可能会引入一些额外的库类型，以简化遵从性并鼓励编写正确的代码。
+剖面配置还可能会引入一些额外的库类型，以简化遵从性并鼓励编写正确的代码。
 
 剖面配置概览：
 
@@ -20780,7 +20716,7 @@ CppCon 的展示的幻灯片是可以获得的（其链接，还有上传的视�
 * <a name="Pro-type-constcast"></a>Type.3: 请勿使用 `const_cast` 强制掉 `const`（亦即不要这样做）：
 [不要强制掉 `const`](#Res-casts-const)。
 * <a name="Pro-type-cstylecast"></a>Type.4: 请勿使用  C 风格的强制转换 `(T)expression` 和函数式风格强制转换 `T(expression)`：
-优先使用[构造语法](#Res-construct)和[具名的强制转换](#Res-casts-named)。
+优先使用[构造语法](#Res-construct)，[具名的强制转换](#Res-casts-named)，或 `T{expression}`。
 * <a name="Pro-type-init"></a>Type.5: 请勿在初始化之前使用变量：
 [坚持进行初始化](#Res-always)。
 * <a name="Pro-type-memberinit"></a>Type.6: 坚持初始化成员变量：
@@ -20867,9 +20803,9 @@ GSL 只有头文件，可以在 [GSL: 指导方针支持库](https://github.com/
 
 各指导方针中，除了使用 GSL 中的类型之外，还使用了标准程序库（如 C++17）中的类型。
 例如，我们假定有一个 `variant` 类型，但它当前尚未在 GSL 中。
-最终，请使用[通过表决进入 C++17 的版本](http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2016/p0088r3.html)。
+总之，请使用[通过表决进入 C++17 的版本](http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2016/p0088r3.html)。
 
-由于诸如当前 C++ 版本的限制等技术原因，您所使用的程序库中可能不支持下面列出的某些 GSL 类型可能未受支持。
+由于诸如当前 C++ 版本的限制等技术原因，您所使用的程序库中可能不支持下面列出的某些 GSL 类型。
 请查阅您的 GSL 文档以获得更多信息。
 
 GSL 组件概览：
@@ -20920,8 +20856,6 @@ GSL 组件概览：
 
 * `span<T>`       // `[p:p+n)`，构造函数接受 `{p, q}` 和 `{p, n}`；`T` 为指针类型
 * `span_p<T>`     // `{p, predicate}` `[p:q)`，其中 `q` 为首个使 `predicate(*p)` 为真的元素
-* `string_span`   // `span<char>`
-* `cstring_span`  // `span<const char>`
 
 `span<T>` 指代零或更多可改动的 `T`，除非 `T` 为 `const` 类型。
 
@@ -20981,9 +20915,6 @@ Range 提案，
 * `String`   // ???
 * `Number`   // ???
 * `Sortable`
-* `Pointer`  // 带有 `*`，`->`，`==`，以及默认构造的类型（默认构造被假定为设值为唯一的“null”值）；参见[智能指针](#SS-gsl-smartptrconcepts)
-* `Unique_pointer`  // 符合 `Pointer` 的类型，具有移动（而不是复制）操作，并符合生存期剖面配置中针对 `unique` 所有者类型的准则；参见[智能指针](#SS-gsl-smartptrconcepts)
-* `Shared_pointer`   // 符合 `Pointer` 的类型，具有复制操作，并符合生存期剖面配置中针对 `shared` 所有者类型的准则；参见[智能指针](#SS-gsl-smartptrconcepts)
 * `EqualityComparable`
 * `Convertible`
 * `Common`
@@ -21001,7 +20932,9 @@ Range 提案，
 
 ### <a name="SS-gsl-smartptrconcepts"></a>GSL.ptr: 智能指针概念
 
-参见 [Lifetime paper](https://github.com/isocpp/CppCoreGuidelines/blob/master/docs/Lifetime.pdf)。
+* `Pointer`  // 带有 `*`，`->`，`==`，以及默认构造的类型（默认构造被假定为设值为唯一的“null”值）
+* `Unique_pointer`  // 符合 `Pointer` 的类型，可移动但不可复制
+* `Shared_pointer`   // 符合 `Pointer` 的类型，可复制
 
 # <a name="S-naming"></a>NL: 命名和代码布局规则
 
@@ -21091,7 +21024,7 @@ IDE 也都会提供某些默认方案和一组替代方案。
 ##### 注解
 
 使用明白易懂的英文。
-我可以流利使用丹麦语，但大多数程序员不行；我的代码的维护者也不行。
+也许我可以流利使用丹麦语，但大多数程序员不行；我的代码的维护者也不行。
 避免使用网络用语，注意你的文法，标点，以及大小写。
 目标是专业性，而不是“够酷”。
 
@@ -21718,9 +21651,9 @@ GSL 是在指导方针中所指定的类型和别名的一个小集合。当写�
 
 没有。GSL 的存在只为提供少量标准库中还没有的类型和别名。如果委员会决定了（这些类型或者满足其需要的其他类型的）标准化的版本，就可以将它们从 GSL 中删除了。
 
-### <a name="Faq-gsl-string-view"></a>FAQ.55: 既然你是尽可能使用标准类型，为什么 GSL 的 `string_span` 同 Library Fundamentals 1 Technical Specification 和 C++17 工作文本中的 `string_view` 不同呢？为什么不使用委员会采纳的 `string_view`？
+### <a name="Faq-gsl-string-view"></a>FAQ.55: 既然你是尽可能使用标准类型，为什么 GSL 的 `span<char>` 同 Library Fundamentals 1 Technical Specification 和 C++17 工作文本中的 `string_view` 不同呢？为什么不使用委员会采纳的 `string_view`？
 
-有关 C++ 标准库的视图的分类的统一观点是，“视图（view）”意味着“只读”，而“跨距（span）”意味着“可读写”。只读的 `string_view` 是第一个完成了标准化过程的这种组件，而 `span` 和 `string_span` 现在还在考虑如何标准化。
+有关 C++ 标准库的视图的分类的统一观点是，“视图（view）”意味着“只读”，而“跨距（span）”意味着“可读写”。如果你只需要一组字符的不需要保证边界检查的只读视图，并且你可以用 C++17，那就使用 C++17 的 `std::string_view`。否则，如果你需要的是不需要保证边界检查的可读写视图，并且可以用 C++20，那就用 C++20 的 `std::span<char>`。否则，就用 `gsl::span<char>`。
 
 ### <a name="Faq-gsl-owner"></a>FAQ.56: `owner` 和提案的 `observer_ptr` 一样吗？
 
@@ -21872,6 +21805,7 @@ GSL 是在指导方针中所指定的类型和别名的一个小集合。当写�
     protected:
         virtual void post_initialize()   // 构造之后立即调用
             { /* ... */ f(); /* ... */ } // 好: 虚函数分派是安全的
+        }
     };
 
 
@@ -21973,7 +21907,7 @@ GSL 是在指导方针中所指定的类型和别名的一个小集合。当写�
 
 不过，一般来说应当避免具体的基类（参见条款 35）。例如，`unary_function` 不过是聚合了一组 typedef，它不可能会被有意单独实例化。给它提供 public 的析构函数完全没有任何意义；更好的设计应当是遵循本条款的建议来给它一个 protected 非虚析构函数猜到。
 
-**References**: [\[C++CS\]](#CplusplusCS) Item 50, [\[Cargill92\]](#Cargill92) pp. 77-79, 207? [\[Cline99\]](#Cline99) §21.06, 21.12-13? [\[Henricson97\]](#Henricson97) pp. 110-114? [\[Koenig97\]](#Koenig97) Chapters 4, 11? [\[Meyers97\]](#Meyers97) §14? [\[Stroustrup00\]](#Stroustrup00) §12.4.2? [\[Sutter02\]](#Sutter02) §27? [\[Sutter04\]](#Sutter04) §18
+**参考**: [\[SuttAlex05\]](#SuttAlex05) Item 50, [\[Cargill92\]](#Cargill92) pp. 77-79, 207? [\[Cline99\]](#Cline99) §21.06, 21.12-13? [\[Henricson97\]](#Henricson97) pp. 110-114? [\[Koenig97\]](#Koenig97) Chapters 4, 11? [\[Meyers97\]](#Meyers97) §14? [\[Stroustrup00\]](#Stroustrup00) §12.4.2? [\[Sutter02\]](#Sutter02) §27? [\[Sutter04\]](#Sutter04) §18
 
 ### <a name="Sd-noexcept"></a>讨论: noexcept 的用法
 
@@ -22067,7 +22001,7 @@ GSL 是在指导方针中所指定的类型和别名的一个小集合。当写�
 
 当使用异常作为错误处理机制的时候，请始终明示这种行为，将这些函数声明为 `noexcept`。（参见条款 75。）
 
-**参考**: [\[C++CS\]](#CplusplusCS) Item 51; [\[C++03\]](#Cplusplus03) §15.2(3), §17.4.4.8(3)? [\[Meyers96\]](#Meyers96) §11? [\[Stroustrup00\]](#Stroustrup00) §14.4.7, §E.2-4? [\[Sutter00\]](#Sutter00) §8, §16? [\[Sutter02\]](#Sutter02) §18-19
+**参考**: [\[SuttAlex05\]](#SuttAlex05) Item 51; [\[C++03\]](#Cplusplus03) §15.2(3), §17.4.4.8(3)? [\[Meyers96\]](#Meyers96) §11? [\[Stroustrup00\]](#Stroustrup00) §14.4.7, §E.2-4? [\[Sutter00\]](#Sutter00) §8, §16? [\[Sutter02\]](#Sutter02) §18-19
 
 ## <a name="Sd-consistent"></a>统一对复制、移动和销毁操作进行定义
 
@@ -22086,7 +22020,6 @@ GSL 是在指导方针中所指定的类型和别名的一个小集合。当写�
 ##### 示例
 
     class X {
-        // ...
     public:
         X(const x&) { /* stuff */ }
 
@@ -22095,6 +22028,8 @@ GSL 是在指导方针中所指定的类型和别名的一个小集合。当写�
         X(x&&) noexcept { /* stuff */ }
 
         // 不好: 未同时定义移动赋值运算符
+
+        // ...
     };
 
     X x1;
@@ -22153,7 +22088,7 @@ GSL 是在指导方针中所指定的类型和别名的一个小集合。当写�
 少数情况下，带有奇怪类型的成员（诸如引用成员）的类也是例外，因为它们的复制语义很古怪。
 在持有引用的类中，你可能需要编写复制构造函数和赋值运算符，但预置的析构函数仍能够做出正确的处理。（需要注意，基本上使用引用成员几乎总是错误的。）
 
-**参考**: [\[C++CS\]](#CplusplusCS) Item 52; [\[Cline99\]](#Cline99) §30.01-14? [\[Koenig97\]](#Koenig97) §4? [\[Stroustrup00\]](#Stroustrup00) §5.5, §10.4? [\[SuttHysl04b\]](#SuttHysl04b)
+**参考**: [\[SuttAlex05\]](#SuttAlex05) Item 52; [\[Cline99\]](#Cline99) §30.01-14? [\[Koenig97\]](#Koenig97) §4? [\[Stroustrup00\]](#Stroustrup00) §5.5, §10.4? [\[SuttHysl04b\]](#SuttHysl04b)
 
 资源管理规则概览：
 
@@ -22237,7 +22172,7 @@ GSL 是在指导方针中所指定的类型和别名的一个小集合。当写�
 检查器必须将任何“裸指针”当作可疑处理。
 检查器可能必须依赖于人工提供的资源列表进行工作。
 上手时，我们知道标准库容器，`string`，以及智能指针。
-`span` 和 `string_span` 的使用能够提供巨大的帮助（它们并非资源句柄）。
+`span` 和 `string_view` 的使用能够提供巨大的帮助（它们并非资源句柄）。
 
 ### <a name="Cr-raw"></a>讨论：“原生”的指针或引用不可能是资源句柄
 
@@ -22590,8 +22525,6 @@ Clang-tidy 有一组专门用于强制实施 C++ 核心指导方针的规则。�
   \[Alexandrescu01]:  A. Alexandrescu. Modern C++ Design (Addison-Wesley, 2001).
 * <a name="Cplusplus03"></a>
   \[C++03]:           ISO/IEC 14882:2003(E), Programming Languages — C++ (updated ISO and ANSI C++ Standard including the contents of (C++98) plus errata corrections).
-* <a name="CplusplusCS"></a>
-  \[C++CS]:           ???
 * <a name="Cargill92"></a>
   \[Cargill92]:       T. Cargill. C++ Programming Style (Addison-Wesley, 1992).
 * <a name="Cline99"></a>
