@@ -1,6 +1,6 @@
 # <a name="main"></a>C++ 核心指导方针
 
-2021/1/28
+2021/3/11
 
 
 编辑：
@@ -2156,9 +2156,15 @@ GCC 6.1 及其后版本支持概念。
 这样做带来一种使其调用代码对于以后的读者变得明晰的倾向，因为这种参数
 在调用点通常都要按名字来进行填充。
 
-##### 强制实施
+##### 注解
+
+只有接口设计者才能胜任处理违反本条指导方针的源头问题。
+
+##### 强制实施策略
 
 【简单】 当两个连续的参数具有相同的类型时就给出警告。
+
+我们仍在寻找不这么简单的强制实施方式。
 
 ### <a name="Ri-abstract"></a>I.25: 优先以空抽象类作为类层次的接口
 
@@ -2387,6 +2393,7 @@ GCC 6.1 及其后版本支持概念。
 * [F.53: 对于非局部使用的（包括被返回的，在堆上存储的，或者传递给别的线程的）lambda，避免采用按引用俘获](#Rf-value-capture)
 * [F.54: 当俘获了 `this` 时，显式俘获所有的变量（不使用默认俘获）](#Rf-this-capture)
 * [F.55: 不要使用 `va_arg` 参数](#F-varargs)
+* [F.56: 避免不必要的条件嵌套](#F-nesting)
 
 函数和 Lambda 表达式以及函数对象有很强的相似性。
 
@@ -2654,7 +2661,7 @@ GCC 6.1 及其后版本支持概念。
 有些优化器可以不依赖于程序员的提示就能很好地进行内联，但请不要依赖这点。
 请测量！至少超过 40 年，我们一直在允诺编译器可以不依赖于人类的提示而做到比人类更好地内联。
 可是我们还在等。
-给出 `inline` 能够促进编译器更好地工作。
+（显式地，或于类定义体中编写成员函数而隐式地）将其指定为内联能够促进编译器工作得更好。
 
 ##### 示例
 
@@ -3084,7 +3091,7 @@ C++ 标准库隐含地对 C 标准库中的所有函数做了这件事。
     }
 
 要求对返回值添加 `const` 的理由是可以防止（非常少见的）对临时对象的意外访问。
-而反对的理由则是妨碍了（非常常见的）对移动语义的利用。
+而反对的理由则是它妨碍了（非常常见的）对移动语义的利用。
 
 ##### 例外
 
@@ -4032,6 +4039,73 @@ C 风格的字符串非常普遍。它们是按一种约定方式定义的：就
 * 为 `va_list`，`va_start`，或 `va_arg` 的使用给出诊断。
 * 如果 vararg 参数的函数并未提供重载以为该参数位置指定更加特定的类型，则当其传递参数时给出诊断。修正：使用别的函数，或标明 `[[suppress(types)]]`。
 
+
+### <a name="F-nesting"></a>F.56: 避免不必要的条件嵌套
+
+##### 理由
+
+浅层嵌套的条件语句使代码容易理解。也会使缩进结构清除明了。
+力求将基础代码放在最外层作用域，除非这样做会搞乱缩进。
+
+##### 示例
+
+使用防卫代码块来处理异常情况，并提早返回。
+
+    // 不好：深层嵌套
+    void foo() {
+        ...
+        if (x) {
+            computeImportantThings(x);
+        }
+    }
+
+    // 不好：还有多余的 else。
+    void foo() {
+        ...
+        if (!x) {
+            return;
+        }
+        else {
+            computeImportantThings(x);
+        }
+    }
+
+    // 好：提早返回，无多余 else
+    void foo() {
+        ...
+        if (!x)
+            return;
+
+        computeImportantThings(x);
+    }
+
+##### 示例
+
+    // 不好：不必要的条件嵌套
+    void foo() {
+        ...
+        if (x) {
+            if (y) {
+                computeImportantThings(x);
+            }
+        }
+    }
+
+    // 好：合并条件 + 提早返回
+    void foo() {
+        ...
+        if (!(x && y))
+            return;
+
+        computeImportantThings(x);
+    }
+
+##### 强制实施
+
+标记多余的 `else`。
+对函数体仅为包含一个代码块的条件语句的函数进行标记。
+
+
 # <a name="S-class"></a>C: 类和类层次
 
 类是一种自定义类型，程序员可以定义它的表示，操作和接口。
@@ -4418,6 +4492,7 @@ C++ 的内建类型都是正规的，标准库中的类，如 `string`，`vector
 
 * [C.10: 优先使用具体类型而不是类继承层次](#Rc-concrete)
 * [C.11: 使具体类型正规化](#Rc-regular)
+* [C.12: 不要令数据成员为 `const` 或引用](#Rc-constref)
 
 ### <a name="Rc-concrete"></a>C.10: 优先使用具体类型而不是类继承层次
 
@@ -4507,6 +4582,27 @@ C++ 的内建类型都是正规的，标准库中的类，如 `string`，`vector
 
 ???
 
+
+### <a name="Rc-constref"></a>C.12: 不要令数据成员为 `const` 或引用
+
+##### 理由
+
+这些没什么用处，还会让类型由于微妙的原因而变得要么无法复制要么部分地无法复制而很难使用。
+
+##### 示例；不好
+
+    class bad {
+        const int i;    // 不好
+        string& s;      // 不好
+        // ...
+    };
+
+##### 强制实施
+
+标记 `const`，`&`，或者 `&&` 的数据成员。
+
+
+
 ## <a name="S-ctor"></a>C.ctor: 构造函数，赋值，和析构函数
 
 这些函数控制对象的生存期：创建，复制，移动，以及销毁。
@@ -4563,7 +4659,7 @@ C++ 的内建类型都是正规的，标准库中的类，如 `string`，`vector
 * [C.60: 使复制赋值非 `virtual`，接受 `const&` 的参数，并返回非 `const` 的引用](#Rc-copy-assignment)
 * [C.61: 复制操作应当进行复制](#Rc-copy-semantic)
 * [C.62: 使复制赋值可以安全进行自赋值](#Rc-copy-self)
-* [C.63: 使移动赋值非 `virtual`，接受 `&&` 的参数，并返回非 `const` 的引用](#Rc-move-assignment)
+* [C.63: 使移动赋值非 `virtual`，接受 `&&` 的参数，并返回非 `const&`](#Rc-move-assignment)
 * [C.64: 移动操作应当进行移动，并使原对象处于有效状态](#Rc-move-semantic)
 * [C.65: 使移动赋值可以安全进行自赋值](#Rc-move-self)
 * [C.66: 使移动操作 `noexcept`](#Rc-move-noexcept)
@@ -4667,30 +4763,26 @@ C++ 的内建类型都是正规的，标准库中的类，如 `string`，`vector
 ##### 示例，好
 
 如果要声明析构函数仅是为了使其为 `virtual` 的话，
-可将其定义为预置的。为避免抑制隐式的移动操作，
-它们也都要进行声明，而且为了避免类成为只能移动
-（而无法复制）的，其复制操作也都需要进行声明：
+可将其定义为预置的。
 
     class AbstractBase {
     public:
-      virtual ~AbstractBase() = default;
-      AbstractBase(const AbstractBase&) = default;
-      AbstractBase& operator=(const AbstractBase&) = default;
-      AbstractBase(AbstractBase&&) = default;
-      AbstractBase& operator=(AbstractBase&&) = default;
+        virtual ~AbstractBase() = default;
+        // ...
     };
 
-另外，为避免发生如 [C.67](#Rc-copy-virtual) 所说的切片，
-其复制和移动操作可以都被弃置：
+为避免发生如 [C.67](#Rc-copy-virtual) 所说的切片，
+可 `=delete` 其复制和移动操作，并添加 `clone`：
 
     class ClonableBase {
     public:
-      virtual unique_ptr<ClonableBase> clone() const;
-      virtual ~ClonableBase() = default;
-      ClonableBase(const ClonableBase&) = delete;
-      ClonableBase& operator=(const ClonableBase&) = delete;
-      ClonableBase(ClonableBase&&) = delete;
-      ClonableBase& operator=(ClonableBase&&) = delete;
+        virtual unique_ptr<ClonableBase> clone() const;
+        virtual ~ClonableBase() = default;
+        ClonableBase(const ClonableBase&) = delete;
+        ClonableBase& operator=(const ClonableBase&) = delete;
+        ClonableBase(ClonableBase&&) = delete;
+        ClonableBase& operator=(ClonableBase&&) = delete;
+        // ... 其他构造函数和函数 ...
     };
 
 这里仅定义移动操作或者进定义复制操作也可以具有
@@ -6034,7 +6126,7 @@ C++11 的初始化式列表规则免除了对许多构造函数的需求。例�
 
 【简单】 赋值运算符不应当包含 `if (this == &a) return *this;` 这样的代码模式 ???
 
-### <a name="Rc-move-assignment"></a>C.63: 使移动赋值非 `virtual`，接受 `&&` 的参数，并返回非 `const` 的引用
+### <a name="Rc-move-assignment"></a>C.63: 使移动赋值非 `virtual`，接受 `&&` 的参数，并返回非 `const&`
 
 ##### 理由
 
@@ -6263,7 +6355,7 @@ ISO 标准中对标准库容器类仅仅保证了“有效但未指明”的状�
 ## C.other: 默认操作的其他规则
 
 除了语言为之提供默认实现的操作之外，
-还有一些操作也是非常基础的，需要对它们的定义进行规范：
+还有一些操作也是非常基础的，需要对它们的定义给出专门的规则：
 比较，`swap`，以及 `hash`。
 
 ### <a name="Rc-eqdefault"></a>C.80: 当需要明确使用缺省语义时，使用 `=default`
@@ -6564,11 +6656,11 @@ ISO 标准中对标准库容器类仅仅保证了“有效但未指明”的状�
 
 ##### 注解
 
-本条规则适用于所有的常规比较运算符：`!=`，`<`，`<=`，`>`，以及 `>=`。
+本条规则适用于所有的常规比较运算符：`!=`，`<`，`<=`，`>`，`>=`，以及 `<=>`。
 
 ##### 强制实施
 
-* 对虚的 `operator==()` 进行标记；其他比较运算符也是如此：`!=`，`<`，`<=`，`>`，和 `>=`。
+* 对虚的 `operator==()` 进行标记；其他比较运算符也是如此：`!=`，`<`，`<=`，`>`，`>=`，以及 `<=>`。
 
 ### <a name="Rc-hash"></a>C.89: 使 `hash` 函数 `noexcept`
 
@@ -8348,7 +8440,7 @@ C++ 语义中的很多部分都假定了其默认的含义。
 
 大多数运算符都有很强烈和活跃的含义约定用法，比如
 
-* 比较：`==`，`!=`，`<`，`<=`，`>`，以及 `>=`
+* 比较：`==`，`!=`，`<`，`<=`，`>`，`>=`，以及 `<=>`
 * 算术操作：`+`，`-`，`*`，`/`，以及 `%`
 * 访问操作：`.`，`->`，一元 `*`，以及 `[]`
 * 赋值：`=`
@@ -11591,7 +11683,7 @@ C++17 收紧了有关求值顺序的规则，但函数实参求值顺序仍然�
 
 ##### 注解
 
-指导方针支持库提供了一个 `narrow_cast` 操作，用以指名发生窄化是可接受的，以及一个 `narrow`（“窄化判定”）当窄化将会损失信息时将会抛出一个异常：
+指导方针支持库提供了一个 `narrow_cast` 操作，用以指名发生窄化是可接受的，以及一个 `narrow`（“窄化判定”）当窄化将会损失合法值时将会抛出一个异常：
 
     i = narrow_cast<int>(d);   // OK (明确需要): 窄化: i 变为了 7
     i = narrow<int>(d);        // OK: 抛出 narrowing_error
@@ -13911,6 +14003,7 @@ C++11 引入了许多核心并发原语，C++14 和 C++17 对它们进行了改�
 **参见**：
 
 * [CP.con: 并发](#SScp-con)
+* [CP.coro: 协程](#SScp-coro)
 * [CP.par: 并行](#SScp-par)
 * [CP.mess: 消息传递](#SScp-mess)
 * [CP.vec: 向量化](#SScp-vec)
@@ -13929,10 +14022,10 @@ C++11 引入了许多核心并发原语，C++14 和 C++17 对它们进行了改�
 
 ##### 示例，不好
 
-    double cached_computation(double x)
+    double cached_computation(int x)
     {
         // 不好：这些静态变量导致多线程的使用情况中的数据竞争
-        static double cached_x = 0.0;
+        static int cached_x = 0.0;
         static double cached_result = COMPUTATION_OF_ZERO;
 
         if (cached_x != x) {
@@ -13947,10 +14040,10 @@ C++11 引入了许多核心并发原语，C++14 和 C++17 对它们进行了改�
 ##### 示例，好
 
     struct ComputationCache {
-        double cached_x = 0.0;
+        int cached_x = 0;
         double cached_result = COMPUTATION_OF_ZERO;
 
-        double compute(double x) {
+        double compute(int x) {
             if (cached_x != x) {
                 cached_x = x;
                 cached_result = computation(x);
@@ -14907,6 +15000,72 @@ C++ 对此的机制是 `atomic` 类型：
 ##### 强制实施
 
 ??? 可能吗？
+
+
+## <a name="SScp-coro"></a>CP.coro: 协程
+
+这一部分关注协程的使用。
+
+协程规则概览：
+
+* [CP.51: 不要使用作为协程的有俘获 lambda 表达式](#Rcoro-capture)
+
+### <a name="Rcoro-capture"></a>CP.51: 不要使用作为协程的有俘获 lambda 表达式
+
+
+##### 理由
+
+对于普通 lambda 来说正确的使用模式，对于协程 lambda 来说是高危的。很明显的变量俘获模式将会造成在首个挂起点之后访问已释放的内存，即便是带引用计数的智能指针和值类型也是如此。
+
+lambda 表达式会产生一个带有存储的闭包对象，它通常在运行栈上，并会在某个时刻离开作用域。当闭包对象离开作用域时，它所俘获的也会离开作用域。普通 lambda 的执行在这个时间点都已经完成了，因此这并不是问题。闭包 lambda 则可能会在闭包对象已经销毁之后从挂起中恢复执行，而在这时其所有俘获都将变为“释放后使用”的内存访问。
+
+##### 示例，不好
+
+    int value = get_value();
+    std::shared_ptr<Foo> sharedFoo = get_foo();
+    {
+      const auto lambda = [value, sharedFoo]() -> std::future<void>
+      {
+        co_await something();
+        // "sharedFoo" 和 "value" 已被销毁
+        // “共享”指针没有带来任何好处
+      };
+      lambda();
+    } // lambda 闭包对象此时已离开作用域
+
+##### 示例，更好
+
+    int value = get_value();
+    std::shared_ptr<Foo> sharedFoo = get_foo();
+    {
+      const auto lambda = [](auto sharedFoo, auto value) -> std::future<void>  // 以按值传参代替作为俘获
+      {
+        co_await something();
+        // sharedFoo 和 value 此时仍然有效
+      };
+      lambda(sharedFoo, value); 
+    } // lambda 闭包对象此时已离开作用域
+
+##### 示例，最佳
+
+使用函数作为协程。
+
+    std::future<void> Class::do_something(int value, std::shared_ptr<Foo> sharedFoo)
+    {
+      co_await something();
+      // sharedFoo 和 value 此时仍然有效
+    }
+
+    void SomeOtherFunction()
+    {
+      int value = get_value();
+      std::shared_ptr<Foo> sharedFoo = get_foo();
+      do_something(value, sharedFoo); 
+    }
+
+##### 强制实施
+
+标记作为协程且具有非空俘获列表的 lambda 表达式。
 
 
 ## <a name="SScp-par"></a>CP.par: 并行
@@ -17913,10 +18072,15 @@ Lambda 会生成函数对象。
 引自该学术论文：“首字母缩略词 SCARY 描述了看似错误的赋值和初始化（受冲突的通用参数的约束），
 但实际上使用了正确的实现（由于最小化的依赖而不受冲突的约束）。”
 
+##### 注解
+
+这同样适用于那些并不依赖于其全部模板形参的 lambda 表达式。
+
 ##### 强制实施
 
-* 对并未依赖于全部模板参数的成员类型进行标记。
-* 对并未依赖于全部模板参数的成员函数进行标记。
+* 对并未依赖于全部模板形参的成员类型进行标记。
+* 对并未依赖于全部模板形参的成员函数进行标记。
+* 对并未依赖于全部模板形参的 lambda 表达式或变量模板进行标记。
 
 ### <a name="Rt-nondependent"></a>T.62: 将无依赖的类模板成员置于一个非模板基类之中
 
@@ -19343,6 +19507,22 @@ C++ 比 C 的表达能力更强，而且为许多种类的编程都提供了更�
 
 外部实体无法依赖于嵌套的无名命名空间中的实体。
 考虑将实现源文件中的所有定义都放入无名命名空间中，除非它定义的是一个“外部/导出”实体。
+
+##### 示例；不好
+
+    static int f();
+    int g();
+    static bool h();
+    int k();
+
+##### 示例；好
+
+    namespace {
+        int f();
+        bool h();
+    }
+    int g();
+    int k();
 
 ##### 示例
 
@@ -20935,7 +21115,7 @@ GSL 组件概览：
 
 * `finally`        // `finally(f)` 创建一个 `final_action{f}`，其析构函数将执行 `f`
 * `narrow_cast`    // `narrow_cast<T>(x)` 就是 `static_cast<T>(x)`
-* `narrow`         // `narrow<T>(x)` 在满足 `static_cast<T>(x) == x` 时为 `static_cast<T>(x)`，否则抛出 `narrowing_error`
+* `narrow`         // `narrow<T>(x)` 在满足无符号提升下的 `static_cast<T>(x) == x` 时为 `static_cast<T>(x)`，否则抛出 `narrowing_error`（例如，`narrow<unsigned>(-42)` 会抛出异常）
 * `[[implicit]]`   // 放在单参数构造函数上的“记号”，以明确说明它们并非显式构造函数。
 * `move_owner`     // `p = move_owner(q)` 含义为 `p = q` 但 ???
 * `joining_thread` // RAII 风格版本的进行联结的 `std::thread`
