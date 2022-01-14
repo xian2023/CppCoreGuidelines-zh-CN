@@ -1,6 +1,6 @@
 # <a name="main"></a>C++ 核心指导方针
 
-2021/6/17
+2022/1/3
 
 
 编辑：
@@ -3082,12 +3082,13 @@ C++ 标准库隐含地对 C 标准库中的所有函数做了这件事。
 
     const vector<int> fct();    // 不好: 这个 "const" 带来的麻烦超过其价值
 
-    vector<int> g(const vector<int>& vx)
+    void g(vector<int>& vx)
     {
         // ...
         fct() = vx;   // 被 "const" 所禁止
         // ...
-        return fct(); // 昂贵的复制："const" 抑制掉了移动语义
+        vx = fct(); // 昂贵的复制："const" 抑制掉了移动语义
+        // ...
     }
 
 要求对返回值添加 `const` 的理由是可以防止（非常少见的）对临时对象的意外访问。
@@ -5131,6 +5132,7 @@ C++ 内建类型都是正规的，标准程序库的一些类型，如 `string`�
 ##### 强制实施
 
 * 带有任何虚函数的类的析构函数，应当要么是 public virtual，要么是 protected 且非 virtual。
+* 如果某个类公开继承于某个基类，则该基类应当具有要么是 public virtual，要么是 protected 且非 virtual 的析构函数。
 
 ### <a name="Rc-dtor-fail"></a>C.36: 析构函数不能失败
 
@@ -7482,17 +7484,23 @@ Lambda 表达式（通常通俗地简称为“lambda”）是一种产生函数�
 
     class B {
     public:
-        virtual owner<B*> clone() = 0;
         B() = default;
         virtual ~B() = default;
-        B(const B&) = delete;
-        B& operator=(const B&) = delete;
+        virtual gsl::owner<B*> clone() const = 0;
+    protected:
+         B(const B&) = default;
+         B& operator=(const B&) = default;
+         B(B&&) = default;
+         B& operator=(B&&) = default;
+        // ...
     };
 
     class D : public B {
     public:
-        owner<D*> clone() override;
-        ~D() override;
+        gsl::owner<D*> clone() override
+        {
+            return new D{*this};
+        }
     };
 
 通常来说，推荐使用智能指针来表示所有权（参见 [R.20](#Rr-owner)）。不过根据语言规则，协变返回类型不能是智能指针：当 `B::clone` 返回 `unique_ptr<B>` 时 `D::clone` 不能返回 `unique_ptr<D>`。因此，你得在所有覆盖函数中统一都返回 `unique_ptr<B>`，或者也可以使用[指导方针支持库](#SS-views)中的 `owner<>` 工具类。
@@ -8065,7 +8073,10 @@ B 类别中的数据成员应当为 `private` 或 `const`。这是因为封装�
 
 ##### 示例
 
-    ???
+    std::string f(Base& b)
+    {
+        return dynamic_cast<Derived&>(b).to_string();
+    }
 
 ##### 强制实施
 
@@ -8813,12 +8824,12 @@ C++ 语义中的很多部分都假定了其默认的含义。
 
     void if_you_must_pun(int& x)
     {
-        auto p = reinterpret_cast<unsigned char*>(&x);
+        auto p = reinterpret_cast<std::byte*>(&x);
         cout << p[0] << '\n';     // OK；好多了
         // ...
     }
 
-访问向不同于对象的声明类型 `reinterpret_cast` 的结果是有定义的行为。（不建议使用 `reinterpret_cast`，
+对从对象的声明类型向 `char*`，`unsigned char*`，或 `std::byte*` 进行 `reinterpret_cast` 的结果进行访问是有定义的行为。（不建议使用 `reinterpret_cast`，
 但至少我们可以发觉发生了某种微妙的事情。）
 
 ##### 注解
@@ -9814,7 +9825,7 @@ C 风格的字符串是以单个指向以零结尾的字符序列的指针来传
 * 【简单】 如果函数以左值引用接受 `Unique_pointer<T>` 参数，但并未在至少一个代码路径中向其赋值或者对其调用 `reset()`，则给出警告。建议代之以接受 `T*` 或 `T&`。
 * 【简单】〔基础〕 如果函数以 `const` 引用接受 `Unique_pointer<T>` 参数，则给出警告。建议代之以接受 `const T*` 或 `const T&`。
 
-### <a name="Rr-sharedptrparam-owner"></a>R.34: `shared_ptr<widget>` 参数用以表达函数是所有者的一份子
+### <a name="Rr-sharedptrparam-owner"></a>R.34: 用 `shared_ptr<widget>` 参数表达共享所有权
 
 ##### 理由
 
@@ -9822,11 +9833,16 @@ C 风格的字符串是以单个指向以零结尾的字符序列的指针来传
 
 ##### 示例，好
 
-    void share(shared_ptr<widget>);            // 共享——“将会”保持一个引用计数
-
-    void may_share(const shared_ptr<widget>&); // “可能”保持一个引用计数
-
-    void reseat(shared_ptr<widget>&);          // “可能”重新置位指针
+    class WidgetUser
+    {
+    public:
+        // WidgetUser 将会共享这个 widget 的所有权
+        explicit WidgetUser(std::shared_ptr<widget> w) noexcept:
+            m_widget{std::move(w)} {}
+        // ...
+    private:
+        std::shared_ptr<widget> m_widget;
+    };
 
 ##### 强制实施
 
@@ -9846,11 +9862,11 @@ C 风格的字符串是以单个指向以零结尾的字符序列的指针来传
 
 ##### 示例，好
 
-    void share(shared_ptr<widget>);            // 共享——“将会”保持一个引用计数
-
-    void reseat(shared_ptr<widget>&);          // “可能”重新置位指针
-
-    void may_share(const shared_ptr<widget>&); // “可能”保持一个引用计数
+    void ChangeWidget(std::shared_ptr<widget>& w)
+    {
+        // 这将会改变调用方的 widget
+        w = std::make_shared<widget>(widget{});
+    }
 
 ##### 强制实施
 
@@ -10200,7 +10216,10 @@ ISO C++ 标准库是最广为了解而且经过最好测试的程序库之一。
 
 ##### 理由
 
-可读性。最小化资源持有率。
+可读性。
+将循环变量的可见性限制到循环范围内。
+避免在循环之后将循环变量用于其他目的。
+最小化资源持有率。
 
 ##### 理由
 
@@ -10221,10 +10240,22 @@ ISO C++ 标准库是最广为了解而且经过最好测试的程序库之一。
         }
     }
 
+##### 示例，请勿如此
+    int j;                            // 不好：j 在循环之外可见
+    for (j = 0; j < 100; ++j) {
+        // ...
+    }
+    // j 在此处仍可见但并不需要
+
+**另请参见**: [不要用一个变量来达成两个不相关的目的](#Res-recycle)
+
 ##### 强制实施
 
-* 对声明于循环之前，且在循环之后不再使用的循环变量进行标记。
+* 若在 `for` 语句中修改的变量是在循环之外声明的，但并未在循环之外使用，则给出警告。
 * 【困难】 对声明与循环之前，且在循环之后用于某个无关用途的循环变量进行标记。
+
+**讨论**：限制循环变量的作用域到循环体还相当有助于代码优化。认识到引入的变量仅在循环体中可以访问，
+允许进行诸如外提（hoisting），强度消减，循环不变式代码外提等等优化。
 
 ##### C++17 和 C++20 示例
 
@@ -10242,8 +10273,6 @@ ISO C++ 标准库是最广为了解而且经过最好测试的程序库之一。
 
 * 选择/循环变量，若其在选择或循环体之前声明而在其之后不再使用，则对其进行标记
 * 【困难】 选择/循环变量，若其在选择或循环体之前声明而在其之后用于某个无关目的，则对其进行标记
-
-
 
 ### <a name="Res-name-length"></a>ES.7: 保持常用的和局部的名字尽量简短，而让非常用的和非局部的名字较长
 
@@ -10443,7 +10472,10 @@ ISO C++ 标准库是最广为了解而且经过最好测试的程序库之一。
 
 考虑：
 
-    auto p = v.begin();   // vector<int>::iterator
+    auto p = v.begin();      // vector<DataRecord>::iterator
+    auto z1 = v[3];          // 产生 DataRecord 的副本
+    auto& z2 = v[3];         // 避免复制
+    const auto& z3 = v[3];   // const 并避免复制
     auto h = t.future();
     auto q = make_unique<int[]>(s);
     auto f = [](int x) { return x + 10; };
@@ -10473,7 +10505,9 @@ ISO C++ 标准库是最广为了解而且经过最好测试的程序库之一。
 
 ##### 示例（C++17）
 
-    auto [ quotient, remainder ] = div(123456, 73);   // 展开 div_t 结果中的成员
+    std::set<int> values;
+    // ...
+    auto [ position, newly_inserted ] = values.insert(5);   // 展开 std::pair 的成员
 
 ##### 强制实施
 
@@ -11703,17 +11737,17 @@ C++17 收紧了有关求值顺序的规则，但函数实参求值顺序仍然�
 
 指导方针支持库提供了一个 `narrow_cast` 操作，用以指名发生窄化是可接受的，以及一个 `narrow`（“窄化判定”）当窄化将会损失合法值时将会抛出一个异常：
 
-    i = narrow_cast<int>(d);   // OK (明确需要): 窄化: i 变为了 7
-    i = narrow<int>(d);        // OK: 抛出 narrowing_error
+    i = gsl::narrow_cast<int>(d);   // OK (明确需要): 窄化: i 变为了 7
+    i = gsl::narrow<int>(d);        // OK: 抛出 narrowing_error
 
 其中还包含了一些含有损失的算术强制转换，比如从负的浮点类型到无符号整型类型的强制转换：
 
     double d = -7.9;
     unsigned u = 0;
 
-    u = d;                          // 不好
-    u = narrow_cast<unsigned>(d);   // OK (明确需要): u 变为了 4294967289
-    u = narrow<unsigned>(d);        // OK: 抛出 narrowing_error
+    u = d;                               // 不好：发生窄化
+    u = gsl::narrow_cast<unsigned>(d);   // OK (明确需要): u 变为了 4294967289
+    u = gsl::narrow<unsigned>(d);        // OK：抛出 narrowing_error
 
 ##### 强制实施
 
@@ -11749,7 +11783,7 @@ C++17 收紧了有关求值顺序的规则，但函数实参求值顺序仍然�
 
 ##### 理由
 
-强制转换是众所周知的错误来源。它们使得一些优化措施变得不可靠。
+强制转换是众所周知的错误来源，它们使得一些优化措施变得不可靠。
 
 ##### 示例，不好
 
@@ -12694,39 +12728,7 @@ C 风格的强制转换很危险，因为它可以进行任何种类的转换，
 
 ### <a name="Res-for-init"></a>ES.74: 优先在 `for` 语句的初始化部分中声明循环变量
 
-##### 理由
-
-限制循环变量的可见性到循环的作用域之内。
-避免在循环之后将循环变量用于其他目的。
-
-##### 示例
-
-    for (int i = 0; i < 100; ++i) {   // 好: 变量 i 仅在循环内部可见
-        // ...
-    }
-
-##### 示例，请勿如此
-
-    int j;                            // 不好: j 在循环之外可见
-    for (j = 0; j < 100; ++j) {
-        // ...
-    }
-    // j 在这里仍然可见但并不需要这样
-
-**参见**: [不要用一个变量来达成两个不相关的目的](#Res-recycle)。
-
-##### 示例
-
-    for (string s; cin >> s; ) {
-        cout << s << '\n';
-    }
-
-##### 强制实施
-
-如果在 `for` 语句中所修改的变量是在循环外面所声明的，且在循环之外并未用到，则给出警告。
-
-**讨论**: 把循环变量的作用域限制在循环体中同样会极大地帮助优化器。识别出这个归纳变量仅在循环体中
-可以访问，能够开启诸如代码外提、强度削弱、循环不变式代码移动等各种优化手段。
+参见 [ES.6](#Res-cond)
 
 ### <a name="Res-do"></a>ES.75: 避免使用 `do` 语句
 
@@ -14105,7 +14107,7 @@ C++11 引入了许多核心并发原语，C++14 和 C++17 对它们进行了改�
 ##### 注解
 
 简而言之，当两个线程并发（未同步）地访问同一个对象，且至少一方为写入方（实施某个非 `const` 操作）时，就会出现数据竞争。
-有关如何正确使用同步来消除数据竞争的更多信息，请求教于一本有关并发的优秀书籍。
+有关如何正确使用同步来消除数据竞争的更多信息，请求教于一本有关并发的优秀书籍（参见 [认真学习文献](#Rconc-literature)）。
 
 ##### 示例，不好
 
@@ -15027,6 +15029,8 @@ C++ 对此的机制是 `atomic` 类型：
 协程规则概览：
 
 * [CP.51: 不要使用作为协程的有俘获 lambda 表达式](#Rcoro-capture)
+* [CP.52: 不要在持有锁或其它同步原语时跨越挂起点](#Rcoro-locks)
+* [CP.53: 协程的形参不能按引用传递](#Rcoro-reference-parameters)
 
 ### <a name="Rcoro-capture"></a>CP.51: 不要使用作为协程的有俘获 lambda 表达式
 
@@ -15085,6 +15089,84 @@ lambda 表达式会产生一个带有存储的闭包对象，它通常在运行�
 
 标记作为协程且具有非空俘获列表的 lambda 表达式。
 
+
+### <a name="Rcoro-locks"></a>CP.52: 不要在持有锁或其它同步原语时跨越挂起点
+
+##### 理由
+
+这种模式会导致明显的死锁风险。某些种类的等待允许当前线程在异步操作完成前实施一些额外的工作。如果持有锁的线程实施了需要相同的所的工作，那它就会因为试图获取它已经持有的锁而发生死锁。
+
+如果协程在某个与获得所的线程不同的另一个线程中完成，那就是未定义行为。即使协程中明确返回其原来的线程，仍然有可能在协程恢复之前抛出异常，并导致其锁定防护对象（lock guard）未能销毁。
+
+##### 示例，不好
+
+    std::mutex g_lock;
+
+    std::future<void> Class::do_something()
+    {
+        std::lock_guard<std::mutex> guard(g_lock);
+        co_await something(); // 危险：在持有锁时挂起协程
+        co_await somethingElse();
+    }
+
+##### 示例，好
+
+    std::mutex g_lock;
+
+    std::future<void> Class::do_something()
+    {
+        {
+            std::lock_guard<std::mutex> guard(g_lock);
+            // 修改被锁保护的数据
+        }
+        co_await something(); // OK：锁已经在协程挂起前被释放
+        co_await somethingElse();
+    }
+
+
+##### 注解
+
+这种模式对于性能也不好。每当遇到比如 `co_await` 这样的挂起点时，都会停止当前函数的执行而去运行别的代码。而在协程恢复之前可能会经过很长时间。这个锁会在整个时间段中持有，并且无法被其他线程获得以进行别的工作。
+
+##### 强制实施
+
+标记所有未能在协程挂起前销毁的锁定防护。
+
+### <a name="Rcoro-reference-parameters"></a>CP.53: 协程的形参不能按引用传递
+
+##### 理由
+
+一旦协程到达其第一个如 `co_await` 这样的挂起点，其同步执行的部分就会返回。这个位置之后，所有按引用传递的形参都是悬挂引用。此后对它们的任何使用都是未定义行为，可能包括向已释放的内存进行写入。
+
+##### 示例，不好
+
+    std::future<int> Class::do_something(const std::shared_ptr<int>& input)
+    {
+        co_await something();
+
+        // 危险：对 input 的引用可能不再有效，可能已经是已释放内存
+        co_return *input + 1;
+    }
+
+##### 示例，好
+
+    std::future<int> Class::do_something(std::shared_ptr<int> input)
+    {
+        co_await something();
+        co_return *input + 1; // input 是一个副本，且到此处仍有效
+    }
+
+##### 注解
+
+这个问题并不适用于仅在第一个挂起点之前访问的引用形参。此后对函数的改动中可能会添加或移除挂起点，而这可能会再次引入这一类的缺陷。一些种类的协程，在协程执行第一行代码之前就会有挂起点，这种情况中的引用形参总是不安全的。一直采用按值传递的方式更安全，因为所复制的形参存活于协程的栈帧中，并在整个协程中都可以安全访问。
+
+##### 注解
+
+输出参数也有这种危险。[F.20: 对于“输出（out）”值，采用返回值优先于输出参数](#Rf-out) 不建议使用输出参数。协程应当完全避免输出参数。
+
+##### 强制实施
+
+标记协程的所有引用形参。
 
 ## <a name="SScp-par"></a>CP.par: 并行
 
@@ -15325,7 +15407,7 @@ lambda 表达式会产生一个带有存储的闭包对象，它通常在运行�
 * Damian Dechev, Peter Pirkelbauer, and Bjarne Stroustrup: Understanding and Effectively Preventing the ABA Problem in Descriptor-based Lock-free Designs. 13th IEEE Computer Society ISORC 2010 Symposium. May 2010.
 * Damian Dechev and Bjarne Stroustrup: Scalable Non-blocking Concurrent Objects for Mission Critical Code. ACM OOPSLA'09. October 2009
 * Damian Dechev, Peter Pirkelbauer, Nicolas Rouquette, and Bjarne Stroustrup: Semantically Enhanced Containers for Concurrent Real-Time Systems. Proc. 16th Annual IEEE International Conference and Workshop on the Engineering of Computer Based Systems (IEEE ECBS). April 2009.
-
+* Maurice Herlihy, Nir Shavit, Victor Luchangco, Michael Spear, "The Art of Multiprocessor Programming", 2nd ed. September 2020
 
 ### <a name="Rconc-double"></a>CP.110: 不要为初始化编写你自己的双检查锁定
 
@@ -15532,7 +15614,7 @@ lambda 表达式会产生一个带有存储的闭包对象，它通常在运行�
 * [E.12: 当函数不可能或不能接受以 `throw` 来退出时，使用 `noexcept`](#Re-noexcept)
 * [E.13: 不要在作为某个对象的直接所有者时抛出异常](#Re-never-throw)
 * [E.14: 应当使用为目的所设计的自定义类型（而不是内建类型）作为异常](#Re-exception-types)
-* [E.15: 按引用捕获类型层次中的异常](#Re-exception-ref)
+* [E.15: 按值抛出并按引用捕获类型层次中的异常](#Re-exception-ref)
 * [E.16: 析构函数，回收函数，以及 `swap` 决不能失败](#Re-never-fail)
 * [E.17: 不要试图在每个函数中捕获每个异常](#Re-not-always)
 * [E.18: 最小化对 `try`/`catch` 的显式使用](#Re-catch)
@@ -15981,33 +16063,39 @@ RAII（Resource Acquisition Is Initialization，资源获取即初始化）是�
 
 识别内建类型的 `throw` 和 `catch`。可能要对使用标准库 `exception` 类型的 `throw` 和 `catch` 进行警告。当然，派生于 `std::exception` 类型层次的异常是没问题的。
 
-### <a name="Re-exception-ref"></a>E.15: 按引用捕获类型层次中的异常
+### <a name="Re-exception-ref"></a>E.15: 按值抛出并按引用捕获类型层次中的异常
 
 ##### 理由
 
-避免发生切片。
+按值（而非指针）抛出并按引用捕获，能避免进行复制，尤其是基类子对象的切片。
 
-##### 示例
+##### 示例，不好
 
     void f()
     {
         try {
             // ...
+            throw new widget{}; // 请勿如此：抛出值而不要抛出原始指针
+            // ...
         }
-        catch (exception e) {   // 请勿如此: 可能造成切片
+        catch (base_class e) {  // 请勿如此: 可能造成切片
             // ...
         }
     }
 
 可以代之以引用：
 
-    catch (exception& e) { /* ... */ }
+    catch (base_class& e) { /* ... */ }
 
 或者（通常更好的）`const` 引用：
 
-    catch (const exception& e) { /* ... */ }
+    catch (const base_class& e) { /* ... */ }
 
 大多数处理器并不会改动异常，一般情况下我们都会[建议使用 `const`](#Res-const)。
+
+##### 注解
+
+对于如一个 `enum` 值这样的小型值类型来说，按值捕获是合适的。
 
 ##### 注解
 
@@ -16015,7 +16103,8 @@ RAII（Resource Acquisition Is Initialization，资源获取即初始化）是�
 
 ##### 强制实施
 
-当异常类型属于某个类型层次时，对按值捕获异常进行标记（这可能需要全程序分析才能完美达成这点）。
+* 对按值捕获具有虚函数的类型进行标记。
+* 对抛出原始指针进行标记。
 
 ### <a name="Re-never-fail"></a>E.16: 析构函数，回收函数，以及 `swap` 决不能失败
 
@@ -21105,8 +21194,8 @@ GSL 组件概览：
 * `czstring`   // `const char*`，假定为 C 风格字符串；亦即以零结尾的 `const` `char` 的序列或者是 `nullptr`
 
 逻辑上来说，最后两种别名是没有必要的，但我们并不总是依照逻辑的，它们可以在指向单个 `char` 的指针和指向 C 风格字符串的指针之间明确地进行区分。
-并未假定为零结尾的字符序列应当是 `char*`，而不是 `zstring`。
-法文重音是可选的。
+并未假定为零结尾的字符序列应当是 `span<char>`，或当因 ABI 问题而不可能时是 `char*`，而不是 `zstring`。
+
 
 对于不能为 `nullptr` 的 C 风格字符串，应使用 `not_null<zstring>`。 ??? 我们需要为 `not_null<zstring>` 命名吗？还是说它的难看是有用的？
 
