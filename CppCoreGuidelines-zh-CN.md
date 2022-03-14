@@ -191,7 +191,7 @@
 
 本文档是一组有关如何更好使用 C++ 的指导方针的集合。
 本文档的目标是帮助人们更有效地使用现代 C++。
-所谓“现代”的含义是指有效使用 ISO C++ 标准（目前是 C++17，但几乎所有的推荐也适用于 C++14 和 C++11）。
+所谓“现代 C++”的含义是指有效使用 ISO C++ 标准（目前是 C++20，但几乎所有的推荐也适用于 C++17，C++14 和 C++11）。
 换句话说，如果你从现在开始算起，五年后你的代码看起来是怎么样的？十年呢？
 
 这些指导方针所关注的是一些相对高层次的问题，比如接口，资源管理，内存管理，以及并发等等。
@@ -228,7 +228,7 @@
 
 # <a name="S-introduction"></a>In: 导言
 
-本文档是一组核心指导方针，针对现代 C++（C++17，C++14 和 C++11），还考虑到了语言将来有希望的增强，以及 ISO 技术规范（TSs）。
+本文档是一组核心指导方针，针对现代 C++（目前为 C++20 和 C++17），还考虑到了语言将来有希望的增强，以及 ISO 技术规范（TS）。
 其目标是帮助 C++ 程序员编写更简单、更高效、更加可维护的代码。
 
 导言概览：
@@ -598,7 +598,7 @@ C++ 程序员应当熟知标准库的基本知识，并在适当的时候加以�
 
 ##### 强制实施
 
-使用最新版的 C++ 编译器（当前支持 C++17，C++14 或 C++11），并打开禁用语言扩展的选项。
+使用最新版的 C++ 编译器（目前支持 C++20 或 C++17），并打开禁用语言扩展的选项。
 
 ### <a name="Rp-what"></a>P.3: 表达你的设计意图
 
@@ -1483,7 +1483,7 @@ C++ 程序员应当熟知标准库的基本知识，并在适当的时候加以�
     s.frequency = alarm_settings::every_10_seconds;
     set_settings(s);
 
-对于一组布尔值的情况，可以考虑使用某种标记枚举；这是一种用于表示一组布尔值的模式。
+对于一组布尔值的情况，可以考虑使用某种标记 `enum`；这是一种用于表示一组布尔值的模式。
 
     enable_lamp_options(lamp_option::on | lamp_option::animate_state_transitions);
 
@@ -1770,7 +1770,7 @@ C++ 程序员应当熟知标准库的基本知识，并在适当的时候加以�
 
 ##### 注解
 
-很快（C++20），所有编译器就都有能力检查删除了 `//` 之后的 `requires` 子句了。
+支持 C++20 的编译器都有能力检查删除了 `//` 之后的 `requires` 子句。
 GCC 6.1 及其后版本支持概念。
 
 **参见**: [泛型编程](#SS-GP)和[概念](#SS-concepts)。
@@ -2853,11 +2853,23 @@ C++ 标准库隐含地对 C 标准库中的所有函数做了这件事。
 
 ##### 示例
 
-    X* find(map<Blob>& m, const string& s, Hint);   // 这里曾经使用过一个提示
+    widget* find(const set<widget>& s, const widget& w, Hint);   // 这里曾经使用过一个提示
 
 ##### 注解
 
 为解决这个问题，在 1980 年代早期就引入了允许形参无名的规则。
+
+如果形参是根据条件不被使用的，可以用 `[[maybe_unused]]` 特性来声明它们。
+例如：
+
+    template <typename Value>
+    Value* find(const set<Value>& s, const Value& v, [[maybe_unused]] Hint h)
+    {
+        if constexpr (sizeof(Value) > CacheSize)
+        {
+            // 仅当 Value 具有特定大小时才使用提示参数
+        }
+    }
 
 ##### 强制实施
 
@@ -10241,6 +10253,7 @@ ISO C++ 标准库是最广为了解而且经过最好测试的程序库之一。
     }
 
 ##### 示例，请勿如此
+
     int j;                            // 不好：j 在循环之外可见
     for (j = 0; j < 100; ++j) {
         // ...
@@ -11749,6 +11762,13 @@ C++17 收紧了有关求值顺序的规则，但函数实参求值顺序仍然�
     u = gsl::narrow_cast<unsigned>(d);   // OK (明确需要): u 变为了 4294967289
     u = gsl::narrow<unsigned>(d);        // OK：抛出 narrowing_error
 
+##### 注解
+
+这条规则不适用于[按语境转换为 bool](https://en.cppreference.com/w/cpp/language/implicit_conversion#Contextual_conversions) 的情形：
+
+    if (ptr) do_something(*ptr);   // OK：ptr 被用作条件
+    bool b = ptr;                  // 不好：发生窄化
+
 ##### 强制实施
 
 优良的分析器可以检测到所有的窄化转换。不过，对所有的窄化转换都进行标记将带来大量的误报。建议的做法是：
@@ -12810,11 +12830,11 @@ C 风格的强制转换很危险，因为它可以进行任何种类的转换，
     switch(x) {
     case 1 :
         while (/* 某种条件 */) {
-            //...
+            // ...
         break;
-        } //噢！打算 break switch 还是 break while？
+        } // 噢！打算 break switch 还是 break while？
     case 2 :
-        //...
+        // ...
         break;
     }
 
@@ -12908,6 +12928,7 @@ C 风格的强制转换很危险，因为它可以进行任何种类的转换，
     }
 
 在 `case` 标签中使用返回语句也是可以的：
+
     switch (x) {
     case 'a':
         return 1;
@@ -12949,7 +12970,7 @@ C 风格的强制转换很危险，因为它可以进行任何种类的转换，
 
 ##### 示例
 
-    enum E { a, b, c , d };
+    enum E { a, b, c, d };
 
     void f1(E x)
     {
@@ -13103,10 +13124,10 @@ C 风格的强制转换很危险，因为它可以进行任何种类的转换，
 根据定义，`if` 语句，`while` 语句，以及 `for` 语句中的条件，选择 `true` 或 `false` 的取值。
 数值与 `0` 相比较，指针值与 `nullptr` 相比较。
 
-    // 这些都表示“当 `p` 不是 `nullptr` 时”
+    // 这些都表示“当 p 不是 nullptr 时”
     if (p) { ... }            // 好
-    if (p != 0) { ... }       // `!=0` 是多余的；不好：不要对指针用 0
-    if (p != nullptr) { ... } // `!=nullptr` 是多余的，不建议如此
+    if (p != 0) { ... }       // !=0 是多余的；不好：不要对指针用 0
+    if (p != nullptr) { ... } // !=nullptr 是多余的，不建议如此
 
 通常，`if (p)` 可解读为“如果 `p` 有效”，这正是程序员意图的直接表达，
 而 `if (p != nullptr)` 则只是一种啰嗦的变通写法。
@@ -13163,10 +13184,10 @@ C 风格的强制转换很危险，因为它可以进行任何种类的转换，
 
 表达相反的条件的最简单的方式就是使用一次取反：
 
-    // 这些都表示“当 `p` 为 `nullptr` 时”
+    // 这些都表示“当 p 为 nullptr 时”
     if (!p) { ... }           // 好
-    if (p == 0) { ... }       // `==0` 是多余的；不好：不要对指针用 `0`
-    if (p == nullptr) { ... } // `==nullptr` 是多余的，不建议如此
+    if (p == 0) { ... }       // ==0 是多余的；不好：不要对指针用 0
+    if (p == nullptr) { ... } // ==nullptr 是多余的，不建议如此
 
 ##### 强制实施
 
@@ -15982,86 +16003,62 @@ RAII（Resource Acquisition Is Initialization，资源获取即初始化）是�
 
 如果有需要清理的某个局部“东西”，但其并未表示为带有析构函数的对象，则这样的清理
 也必须在 `throw` 之前完成。
-有时候，[`finally()](#Re-finally) 可以把这种不系统的清理变得更加可管理一些。
+有时候，[`finally()`](#Re-finally) 可以把这种不系统的清理变得更加可管理一些。
 
 ### <a name="Re-exception-types"></a>E.14: 应当使用为目的所设计的自定义类型（而不是内建类型）作为异常
 
 ##### 理由
 
-自定义类型不大可能会和其他人的异常造成冲突。
+自定义类型可以把有关某个错误的信息更好地传递给处理器。
+这些信息可以编码到类型自身中，而类型则不大可能会和其他人的异常造成冲突。
 
 ##### 示例
 
-    void my_code()
+    throw 7; // 不好
+
+    throw "something bad";  // 不好
+
+    throw std::exception(); // 不好 - 未提供信息
+
+从 `std::exception` 派生，能够获得选择捕获特定异常或者通过 `std::exception` 进行通盘处理的灵活性：
+
+    class MyException: public std::runtime_error
     {
+    public:
+        MyException(const string& msg) : std::runtime_error(msg) {}
         // ...
-        throw Moonphase_error{};
-        // ...
-    }
+    };
 
-    void your_code()
-    {
-        try {
-            // ...
-            my_code();
-            // ...
-        }
-        catch(const Bufferpool_exhausted&) {
-            // ...
-        }
-    }
+    // ...
 
-##### 示例，请勿如此
+    throw MyException("something bad");  // 好
 
-    void my_code()     // 请勿如此
-    {
-        // ...
-        throw 7;       // 7 的意思是“月亮在第四象限”
-        // ...
-    }
+异常可以不必派生于 `std::exception`：
 
-    void your_code()   // 请勿如此
-    {
-        try {
-            // ...
-            my_code();
-            // ...
-        }
-        catch(int i) {  // i == 7 的意思是“输入缓冲区太小”
-            // ...
-        }
-    }
+    class MyCustomError final {};  // 并未派生于 std::exception
 
-##### 注解
+    // ...
 
-标准库中派生于 `exception` 的类应当仅被当做基类，或者用于仅需要“通用”处理的异常。和内建类型相似，它们的使用可能会与其他人的使用相冲突。
+    throw MyCustomError{};  // 好 - 处理器必须捕获这个类型（或 ...）
 
-##### 示例，请勿如此
+当检测位置没有可以添加的有用信息时，可以使用派生于 `exception`
+的库类型作为通用类型：
 
-    void my_code()   // 请勿如此
-    {
-        // ...
-        throw runtime_error{"moon in the 4th quarter"};
-        // ...
-    }
+    throw std::runtime_error{"someting bad"}; // 好
 
-    void your_code()   // 请勿如此
-    {
-        try {
-            // ...
-            my_code();
-            // ...
-        }
-        catch(const runtime_error&) {   // runtime_error 的含义是“输入缓冲区太小”
-            // ...
-        }
-    }
+    // ...
 
-**参见**: [讨论](#Sd-???)
+    throw std::invalid_argument("i is not even"); // 好
+
+也可以使用 `enum` 类：
+
+    enum class alert {RED, YELLOW, GREEN};
+
+    throw alert::RED; // 好
 
 ##### 强制实施
 
-识别内建类型的 `throw` 和 `catch`。可能要对使用标准库 `exception` 类型的 `throw` 和 `catch` 进行警告。当然，派生于 `std::exception` 类型层次的异常是没问题的。
+识别针对内建类型和 `std::exception` 的 `throw`。
 
 ### <a name="Re-exception-ref"></a>E.15: 按值抛出并按引用捕获类型层次中的异常
 
@@ -17475,7 +17472,7 @@ GCC 6.1 及其后版本支持概念。
     // ... 其他比较运算符 ...
 
     Minimal operator+(const Convenient&, const Convenient&);
-    // .. 其他算术运算符 ...
+    // ... 其他算术运算符 ...
 
     void f(const Convenient& x, const Convenient& y)
     {
@@ -17946,14 +17943,14 @@ Lambda 会生成函数对象。
         explicit X(int);
         X(const X&);            // 复制
         X operator=(const X&);
-        X(X&&) noexcept;                 // 移动
+        X(X&&) noexcept;        // 移动
         X& operator=(X&&) noexcept;
         ~X();
         // ... 没有别的构造函数了 ...
     };
 
-    X x {1};    // 没问题
-    X y = x;      // 没问题
+    X x {1};              // 没问题
+    X y = x;              // 没问题
     std::vector<X> v(10); // 错误: 没有默认构造函数
 
 ##### 注解
@@ -18377,7 +18374,7 @@ Lambda 会生成函数对象。
     void test2(T t)
         // 不带限定地调用非成员函数
     {
-        f(t);  // 要求 f(/*T*/) 在调用方的作用域或者 T 的命名空间中可用
+        f(t);     // 要求 f(/*T*/) 在调用方的作用域或者 T 的命名空间中可用
     }
 
     template<class T>
@@ -19741,7 +19738,7 @@ C 数组不那么安全，而且相对于 `array` 和 `vector` 也没有什么�
 
     int v[SIZE];                        // 不好
 
-    std::array<int, SIZE> w;             // ok
+    std::array<int, SIZE> w;            // ok
 
 ##### 示例
 
@@ -21912,7 +21909,7 @@ C 风格的布局强调其在表达式中的用法和文法，而 C++ 风格强�
 
 ### <a name="Faq-aims"></a>FAQ.1: 这些指导方针的想要达成什么目标？
 
-请参见<a href="#S-abstract">本页面开头</a>。这是一个开源项目，旨在为采用当今的 C++ 标准（写此文时为 C++14）来编写 C++ 代码而维护的一组现代的权威指导方针。这些指导方针的设计是现代的，尽可能使机器可实施的，并且是为贡献和分支保持开放，以使各种组织机构可以便于将它们整合到其自己组织的编码指导方针之中。
+请参见<a href="#S-abstract">本页面开头</a>。这是一个开源项目，旨在为采用当今的 C++ 标准来编写 C++ 代码而维护的一组现代的权威指导方针。这些指导方针的设计是现代的，尽可能使机器可实施的，并且是为贡献和分支保持开放，以使各种组织机构可以便于将它们整合到其自己组织的编码指导方针之中。
 
 ### <a name="Faq-announced"></a>FAQ.2: 这项工作是何时何地首次公开的？
 
@@ -21940,11 +21937,11 @@ C 风格的布局强调其在表达式中的用法和文法，而 C++ 风格强�
 
 ### <a name="Faq-cpp98"></a>FAQ.8: 会有 C++98 版本的指导方针吗？C++11 版本呢？
 
-不会。这些指导方针的目标是更好地使用标准 C++14（和 Concepts 技术规范，当你有一个实现的话），以及假定你有一个现代的遵循标准的编译器时如何进行代码编写的。
+不会。这些指导方针的目标是更好地使用现代标准 C++，以及假定你有一个现代的遵循标准的编译器时如何进行代码编写的。
 
 ### <a name="Faq-language-extensions"></a>FAQ.9: 这些指导方针中会提出新的语言功能吗？
 
-不会。这些指导方针的目标是更好地使用标准 C++14 和 Concepts 技术规范的，它们会自我限定为仅建议使用这些功能。
+不会。这些指导方针的目标是更好地使用现代标准 C++，它们自我限定为仅建议使用这些功能。
 
 ### <a name="Faq-markdown"></a>FAQ.10: 这些指导方针的书写使用的是哪个版本的 Markdown？
 
@@ -22291,7 +22288,7 @@ GSL 是在指导方针中所指定的类型和别名的一个小集合。当写�
 
         void test()
         {
-            std::array<Nefarious, 10> arr; // 这行代码会导致 std::terminate(!)
+            std::array<Nefarious, 10> arr; // 这行代码会导致 std::terminate()
         }
 
     当出现可能抛出异常的析构函数时，数组的行为是未定义的，因为根本不可能发明出合理的回退行为。请想象一下：编译器如何才能生成用来构造 `arr` 的代码，如果第四个对象的构造函数抛出了异常，这段代码必须放弃，且在其清理模式中将试图调用已经构造完成的每个对象的析构函数……而这些析构函数中的一个或更多会抛出异常呢？不存在令人满意的答案。
