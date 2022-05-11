@@ -56,7 +56,7 @@
 * [RF: 参考资料](#S-references)
 * [PRO: 剖面配置](#S-profile)
 * [GSL: 指导方针支持库](#S-gsl)
-* [NL: 命名和代码布局规则](#S-naming)
+* [NL: 命名和代码布局建议](#S-naming)
 * [FAQ: 常见问题的解答](#S-faq)
 * [附录 A: 程序库](#S-libraries)
 * [附录 B: 代码的现代化转换](#S-modernizing)
@@ -449,7 +449,7 @@
 * [RF: 参考资料](#S-references)
 * [Pro: 剖面配置](#S-profile)
 * [GSL: 指导方针支持库](#S-gsl)
-* [NL: 命名和代码布局](#S-naming)
+* [NL: 命名和代码布局建议](#S-naming)
 * [FAQ: 常见问题的解答](#S-faq)
 * [附录 A: 程序库](#S-libraries)
 * [附录 B: 代码的现代化转换](#S-modernizing)
@@ -1762,22 +1762,17 @@ C++ 程序员应当熟知标准库的基本知识，并在适当的时候加以�
 使用 C++20 风格的必要条件说明。例如：
 
     template<typename Iter, typename Val>
-    // requires InputIterator<Iter> && EqualityComparable<ValueType<Iter>, Val>
+      requires input_iterator<Iter> && equality_comparable_with<iter_value_t<Iter>, Val>
     Iter find(Iter first, Iter last, Val v)
     {
         // ...
     }
 
-##### 注解
-
-支持 C++20 的编译器都有能力检查删除了 `//` 之后的 `requires` 子句。
-GCC 6.1 及其后版本支持概念。
-
 **参见**: [泛型编程](#SS-GP)和[概念](#SS-concepts)。
 
 ##### 强制实施
 
-【还无法强制实施】 当前正在对一种语言设施进行规范化。一旦这种语言设施出现，就可以对未被概念所约束（在其声明式之中或者在一个 `requires` 子句中所给出）的并非可变数量的模板形参作出警告了。
+对未被概念所约束（在其声明式之中或者在一个 `requires` 子句中所给出）的并非可变数量的模板形参作出警告。
 
 ### <a name="Ri-except"></a>I.10: 使用异常来表明无法实施所要求的任务
 
@@ -2081,10 +2076,11 @@ GCC 6.1 及其后版本支持概念。
 
 把参数成“批”进行组合是减少参数数量和增加进行检查的机会的一般性技巧。
 
-或者，我们也可以用概念（如 ISO TS 所定义）来定义这三个类型必须可以用于进行合并：
+或者，我们也可以用标准库概念来定义“三个类型必须可以用于归并”：
 
-    Mergeable{In1, In2, Out}
-    OutputIterator merge(In1 r1, In2 r2, Out result);
+    template<class In1, class In2, class Out>
+      requires mergeable<In1, In2, Out>
+    Out merge(In1 r1, In2 r2, Out result);
 
 ##### 示例
 
@@ -3757,6 +3753,7 @@ C 风格的字符串非常普遍。它们是按一种约定方式定义的：就
 ##### 注解
 
 我们提出这条规则，只是因为这种错误持续存在于大众之间。
+注意，虽然其返回类型不是 `void`，但主函数并不需要明确的返回语句。
 
 ##### 强制实施
 
@@ -8100,7 +8097,7 @@ B 类别中的数据成员应当为 `private` 或 `const`。这是因为封装�
 
 `dynamic_cast` 转换允许测试指针是否指向某个其类层次中包含给定类的多态对象。由于其找不到类时仅会返回空值，因而可以在运行时予以测试。这允许编写的代码可以基于其结果而选择不同的代码路径。
 
-与此相对，[C.147](#Rh-ptr-cast) 中失败即是错误，而且不能用于条件执行。
+与此相对，[C.147](#Rh-ref-cast) 中失败即是错误，而且不能用于条件执行。
 
 ##### 示例
 
@@ -10445,7 +10442,7 @@ ISO C++ 标准库是最广为了解而且经过最好测试的程序库之一。
 
 用 concept 则更佳：
 
-    bool any_of(InputIterator first, InputIterator last, Predicate pred);
+    bool any_of(input_iterator auto first, input_iterator auto last, predicate auto pred);
 
 ##### 示例
 
@@ -10511,10 +10508,10 @@ ISO C++ 标准库是最广为了解而且经过最好测试的程序库之一。
 
 ##### 注解
 
-如果可以使用概念的话，我们可以（而且应该）更加明确说明所推断的类型：
+C++20 的情况是，我们可以（而且应该）使用概念来更加明确地说明所推断的类型：
 
     // ...
-    ForwardIterator p = algo(x, y, z);
+    forward_iterator auto p = algo(x, y, z);
 
 ##### 示例（C++17）
 
@@ -13717,11 +13714,11 @@ href="#Rper-Knuth">Per.2</a>。）
 
 这里，我们利用了编译器关于数组大小，元素类型，以及如何对 `double` 进行比较的知识。
 
-而以 C++11 加上[概念](#SS-concepts)的话，我还可以做得更好：
+而以 C++20 的话，我们还可以做得更好：
 
-    // Sortable 指定了 c 必须是一个
+    // sortable 指定了 c 必须是一个
     // 可以用 < 进行比较的元素的随机访问序列
-    void sort(Sortable& c);
+    void sort(sortable auto& c);
 
     sort(c);
 
@@ -13731,10 +13728,10 @@ href="#Rper-Knuth">Per.2</a>。）
 为使接口完整，我们需要另一个接受比较准则的版本：
 
     // 用 p 比较 c 的元素
-    void sort(Sortable& c, Predicate<Value_type<Sortable>> p);
+    template<random_access_range R, class C> requires sortable<R, C>
+    void sort(R&& r, C c);
 
-`sort` 的标准库规范提供了这两个版本，
-但其语义是以英文而不是使用概念的代码来表达的。
+`sort` 的标准库规范提供了这两个版本和其他版本。
 
 ##### 注解
 
@@ -16821,11 +16818,7 @@ C 风格的错误处理就是基于全局变量 `errno` 的，因此基本上不
 模板还可用于进行元编程；亦即由编译期代码所组成的程序。
 
 泛型编程的中心是“概念”；亦即以编译时谓词表现的对于模板参数的要求。
-“概念”是在一份 ISO 技术规范中定义的：[concepts](http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/n4553.pdf)。
-而一组标准库概念的草案则可以在另一份 ISO TS 中找到：[ranges](http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2016/n4569.pdf)。
-GCC 6.1 及其后版本支持概念。
-因此，我们在例子中将概念注释掉了；就是说我们仅把它们当成形式化的注释。
-如果你使用 GCC 6.1 或更新版本，那么你就可以取消它们的注释。
+C++20 已经将“概念”标准化了，不过是在 GCC 6.1 中以一种略有不同的语法首次提供的。
 
 模板使用的规则概览：
 
@@ -16931,7 +16924,7 @@ GCC 6.1 及其后版本支持概念。
 概念上说，以下要求是错误的，因为我们所要求的 `T` 不止是如“可以增量”或“可以进行加法”这样的非常低级的概念：
 
     template<typename T>
-        // requires Incrementable<T>
+        requires Incrementable<T>
     T sum1(vector<T>& v, T s)
     {
         for (auto x : v) s += x;
@@ -16939,7 +16932,7 @@ GCC 6.1 及其后版本支持概念。
     }
 
     template<typename T>
-        // requires Simple_number<T>
+        requires Simple_number<T>
     T sum2(vector<T>& v, T s)
     {
         for (auto x : v) s = s + x;
@@ -16952,7 +16945,7 @@ GCC 6.1 及其后版本支持概念。
 ##### 示例
 
     template<typename T>
-        // requires Arithmetic<T>
+        requires Arithmetic<T>
     T sum(vector<T>& v, T s)
     {
         for (auto x : v) s += x;
@@ -16975,14 +16968,6 @@ GCC 6.1 及其后版本支持概念。
 
 可以用模板来表现几乎任何东西（它是图灵完备的），但（利用模板进行）泛型编程的目标在于，
 使操作和算法对于一组带有相似语义性质的类型有效地进行通用化。
-
-##### 注解
-
-代码注释中的 `requires` 是 `concept` 的用法。
-“概念”是在一份 ISO 技术规范中定义的：[concepts](http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/n4553.pdf)。
-GCC 6.1 及其后版本支持概念。
-因此，我们在例子中将概念注释掉了；就是说我们仅把它们当成形式化的注释。
-如果你使用 GCC 6.1 或更新版本，那么你就可以取消它们的注释。
 
 ##### 强制实施
 
@@ -17154,9 +17139,8 @@ GCC 6.1 及其后版本支持概念。
 
 ## <a name="SS-concepts"></a>T.concepts: 概念规则
 
-概念是一种用于为模板参数指定要求的设施。
-它是一项 [ISO 技术规范](http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/n4553.pdf)，但当前仅由 GCC 所支持。
-然而，在考虑泛型编程，以及未来的 C++ 程序库（无论标准的还是其他的）的基础时，
+概念是一种 C++20 语言设施，用于为模板参数指定要求。
+在考虑泛型编程，以及未来的 C++ 程序库（无论标准的还是其他的）的基础时，
 概念都是关键性的。
 
 本部分假定有概念支持。
@@ -17194,8 +17178,8 @@ GCC 6.1 及其后版本支持概念。
 ##### 示例
 
     template<typename Iter, typename Val>
-    //    requires Input_iterator<Iter>
-    //             && Equality_comparable<Value_type<Iter>, Val>
+        requires input_iterator<Iter>
+                 && equality_comparable_with<value_type_t<Iter>, Val>
     Iter find(Iter b, Iter e, Val v)
     {
         // ...
@@ -17203,24 +17187,8 @@ GCC 6.1 及其后版本支持概念。
 
 也可以等价地用更为简洁的方式：
 
-    template<Input_iterator Iter, typename Val>
-    //    requires Equality_comparable<Value_type<Iter>, Val>
-    Iter find(Iter b, Iter e, Val v)
-    {
-        // ...
-    }
-
-##### 注解
-
-“概念”是在一份 ISO 技术规范中定义的：[concepts](http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/n4553.pdf)。
-而一组标准库概念的草案则可以在另一份 ISO TS 中找到：[ranges](http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2016/n4569.pdf)。
-GCC 6.1 及其后版本支持概念。
-因此，我们在例子中将概念注释掉了；就是说我们仅把它们当成形式化的注释。
-如果你使用 GCC 6.1 或更新版本，那么你就可以取消它们的注释。
-
-    template<typename Iter, typename Val>
-        requires Input_iterator<Iter>
-               && Equality_comparable<Value_type<Iter>, Val>
+    template<input_iterator Iter, typename Val>
+        requires equality_comparable_with<value_type_t<Iter>, Val>
     Iter find(Iter b, Iter e, Val v)
     {
         // ...
@@ -17232,7 +17200,7 @@ GCC 6.1 及其后版本支持概念。
 应当仅在只能假定“这是一个类型”的罕见情况中使用它们。
 通常，这只会在当我们（用模板元编程代码）操作纯粹的表达式树，并推迟进行类型检查时才会需要。
 
-**参考**: TC++PL4, Palo Alto TR, Sutton
+**参考**: TC++PL4
 
 ##### 强制实施
 
@@ -17242,26 +17210,26 @@ GCC 6.1 及其后版本支持概念。
 
 ##### 理由
 
-“标准”概念（即由 [GSL](#S-gsl) 和 [Ranges TS](http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2016/n4569.pdf)，以及希望近期 ISO 标准自身所提供的）概念，
+“标准”概念（即由 [GSL](#S-gsl) 和 ISO 标准自身所提供的概念)，
 避免了我们思考自己的概念，它们比我们匆忙中能够想出来的要好得多，而且还提升了互操作性。
 
 ##### 注解
 
 如果你不是要创建一个新的泛型程序库的话，大多数所需的概念都已经在标准库中定义过了。
 
-##### 示例（采用 TS 版本的概念）
+##### 示例
 
     template<typename T>
-        // 请勿定义这个: GSL 中已经有 Sortable
+        // 请勿定义这个: <iterator> 中已经有 sortable
     concept Ordered_container = Sequence<T> && Random_access<Iterator<T>> && Ordered<Value_type<T>>;
 
-    void sort(Ordered_container& s);
+    void sort(Ordered_container auto& s);
 
-这个 `Ordered_container` 貌似相当合理，但它和 GSL（以及 Range TS）中的 `Sortable` 概念非常相似。
+这个 `Ordered_container` 貌似相当合理，但它和标准库中的 `sortable` 概念非常相似。
 它是更好？更正确？它真的精确地反映了标准对于 `sort` 的要求吗？
-直接使用 `Sortable` 则更好而且更简单：
+直接使用 `sortable` 则更好而且更简单：
 
-    void sort(Sortable& s);   // 更好
+    void sort(sortable auto& s);   // 更好
 
 ##### 注解
 
@@ -17284,11 +17252,11 @@ GCC 6.1 及其后版本支持概念。
 
 `auto` 是最弱的概念。概念的名字会比仅用 `auto` 传达出更多的意义。
 
-##### 示例（采用 TS 版本的概念）
+##### 示例
 
     vector<string> v{ "abc", "xyz" };
-    auto& x = v.front();     // 不好
-    String& s = v.front();   // 好（String 是 GSL 的一个概念）
+    auto& x = v.front();        // 不好
+    String auto& s = v.front(); // 好（String 是 GSL 的一个概念）
 
 ##### 强制实施
 
@@ -17300,28 +17268,20 @@ GCC 6.1 及其后版本支持概念。
 
 可读性。直接表达意图。
 
-##### 示例（采用 TS 版本的概念）
+##### 示例
 
-这样来表达“`T` 是一种 `Sortable`”：
+这样来表达“`T` 是一种 `sortable`”：
 
     template<typename T>       // 正确但很啰嗦：“参数的类型
-    //    requires Sortable<T>   // 为 T，这是某个 Sortable
+        requires sortable<T>   // 为 T，这是某个 sortable
     void sort(T&);             // 类型的名字”
 
-    template<Sortable T>       // 有改善（假定支持概念）：“参数的类型
+    template<sortable T>       // 有改善：“参数的类型
     void sort(T&);             // 为 Sortable 的类型 T”
 
-    void sort(Sortable&);      // 最佳方式（假定支持概念）：“参数为 Sortable”
+    void sort(sortable auto&); // 最佳方式：“参数为 sortable”
 
 越简练的版本越符合我们的说话方式。注意许多模板不在需要使用 `template` 关键字了。
-
-##### 注解
-
-“概念”是在一份 ISO 技术规范中定义的：[concepts](http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/n4553.pdf)。
-而一组标准库概念的草案则可以在另一份 ISO TS 中找到：[ranges](http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2016/n4569.pdf)。
-GCC 6.1 及其后版本支持概念。
-因此，我们在例子中将概念注释掉了；就是说我们仅把它们当成形式化的注释。
-如果你使用支持概念的编译器（比如 GCC 6.1 或更新版本），那么你就可以删掉 `//`。
 
 ##### 强制实施
 
@@ -17335,7 +17295,7 @@ GCC 6.1 及其后版本支持概念。
 只是把用在某个具体的类或算法的参数上的一组语法约束聚在一起，并不是概念所设计的用法，
 也无法获得这个机制的全部好处。
 
-显然，定义概念对于那些可以使用某个实现（比如 GCC 6.1 或更新版本）的代码是最有用的，
+显然，定义概念对于那些可以使用某个实现（比如 C++20 或更新版本）的代码是最有用的，
 不过定义概念本身就是一种有益的设计技巧，有助于发现概念上的错误并清理实现中的各种概念。
 
 ### <a name="Rt-low"></a>T.20: 避免没有有意义的语义的“概念”
@@ -17346,12 +17306,14 @@ GCC 6.1 及其后版本支持概念。
 简单的约束，比如“带有 `+` 运算符”和“带有 `>` 运算符”，是无法独立进行有意义的运用的，
 而仅应当被用作有意义的概念的构造块，而不是在用户代码中使用。
 
-##### 示例，不好（采用 TS 版本的概念）
+##### 示例，不好
 
     template<typename T>
-    concept Addable = has_plus<T>;    // 不好，不充分
+    // 不好，不充分
+    concept Addable = requires(T a, T b) { a+b; };
 
-    template<Addable N> auto algo(const N& a, const N& b) // 使用两个数值
+    template<Addable N>
+    auto algo(const N& a, const N& b) // 使用两个数值
     {
         // ...
         return a + b;
@@ -17372,16 +17334,14 @@ GCC 6.1 及其后版本支持概念。
 
 给出有意义的语义的能力，在于定义真正的概念的特征，而不是仅给出语法约束。
 
-##### 示例（使用 TS 概念语法）
+##### 示例
 
     template<typename T>
     // 假定数值的运算符 +、-、* 和 / 都遵循常规的数学法则
-    concept Number = has_plus<T>
-                     && has_minus<T>
-                     && has_multiply<T>
-                     && has_divide<T>;
+    concept Number = requires(T a, T b) { a+b; a-b; a*b; a/b; };
 
-    template<Number N> auto algo(const N& a, const N& b)
+    template<Number N>
+    auto algo(const N& a, const N& b)
     {
         // ...
         return a + b;
@@ -17417,9 +17377,9 @@ GCC 6.1 及其后版本支持概念。
 
 这是对一般性规则[必须让概念有语义上的意义](#Rt-low)的一个专门的变体。
 
-##### 示例，不好（采用 TS 版本的概念）
+##### 示例，不好
 
-    template<typename T> concept Subtractable = requires(T a, T, b) { a-b; };
+    template<typename T> concept Subtractable = requires(T a, T b) { a-b; };
 
 这个是没有语义作用的。
 你至少还需要 `+` 来让 `-` 有意义和有用处。
@@ -17503,17 +17463,17 @@ GCC 6.1 及其后版本支持概念。
 以非正式、半正式或正式的方式表达这些语义可以使概念对于读者更加可理解，而且对其进行表达的工作也能发现一些概念上的错误。
 对语义的说明是一种强大的设计工具。
 
-##### 示例（采用 TS 版本的概念）
+##### 示例
 
     template<typename T>
         // 假定数值的运算符 +、-、* 和 / 都遵循常规的数学法则
         // axiom(T a, T b) { a + b == b + a; a - a == 0; a * (b + c) == a * b + a * c; /*...*/ }
         concept Number = requires(T a, T b) {
-            {a + b} -> T;   // a + b 的结果可以转换为 T
-            {a - b} -> T;
-            {a * b} -> T;
-            {a / b} -> T;
-        }
+            {a + b} -> convertible_to<T>;
+            {a - b} -> convertible_to<T>;
+            {a * b} -> convertible_to<T>;
+            {a / b} -> convertible_to<T>;
+        };
 
 ##### 注解
 
@@ -17532,18 +17492,18 @@ GCC 6.1 及其后版本支持概念。
 
 GSL 中的概念都具有恰当定义的语义；请参见 Palo Alto TR 和 Ranges TS。
 
-##### 例外（采用 TS 版本的概念）
+##### 例外
 
 一个处于开发之中的新“概念”的早期版本，经常会仅仅定义了一组简单的约束而并没有恰当指定的语义。
 为其寻找正确的语义可能是很费功夫和时间的。
 不过不完整的约束集合仍然是很有用的：
 
     // 对于一般二叉树的平衡器
-    template<typename Node> concept bool Balancer = requires(Node* p) {
+    template<typename Node> concept Balancer = requires(Node* p) {
         add_fixup(p);
         touch(p);
         detach(p);
-    }
+    };
 
 这样 `Balancer` 就必须为树的 `Node` 至少提供这些操作，
 但我们还是无法指定详细的语义，因为一种新种类的平衡树可能需要更多的操作，
@@ -17564,13 +17524,15 @@ GSL 中的概念都具有恰当定义的语义；请参见 Palo Alto TR 和 Rang
 
 否则编译器是无法自动对它们进行区分的。
 
-##### 示例（采用 TS 版本的概念）
+##### 示例
 
     template<typename I>
-    concept bool Input_iter = requires(I iter) { ++iter; };
+    // 注：<iterator> 中定义了 input_iterator
+    concept Input_iter = requires(I iter) { ++iter; };
 
     template<typename I>
-    concept bool Fwd_iter = Input_iter<I> && requires(I iter) { iter++; }
+    // 注：<iterator> 中定义了 forward_iterator
+    concept Fwd_iter = Input_iter<I> && requires(I iter) { iter++; };
 
 编译器可以基于所要求的操作的集合（这里为前缀 `++`）来确定提炼关系。
 这样做减少了这些类型的实现者的负担，
@@ -17588,23 +17550,25 @@ GSL 中的概念都具有恰当定义的语义；请参见 Palo Alto TR 和 Rang
 
 要求相同的语法但具有不同语义的两个概念之间会造成歧义，除非程序员对它们进行区分。
 
-##### 示例（采用 TS 版本的概念）
+##### 示例
 
     template<typename I>    // 提供随机访问的迭代器
-    concept bool RA_iter = ...;
+    // 注：<iterator> 中定义了 random_access_iterator
+    concept RA_iter = ...;
 
     template<typename I>    // 提供对连续数据的随机访问的迭代器
-    concept bool Contiguous_iter =
-        RA_iter<I> && is_contiguous<I>::value;  // 使用 is_contiguous 特征
+    // 注：<iterator> 中定义了 contiguous_iterator
+    concept Contiguous_iter =
+        RA_iter<I> && is_contiguous_v<I>;  // 使用 is_contiguous 特征
 
 程序员（在程序库中）必须适当地定义（特征） `is_contiguous`。
 
 把标签类包装到概念中可以得到这个方案的更简单的表达方式：
 
-    template<typename I> concept Contiguous = is_contiguous<I>::value;
+    template<typename I> concept Contiguous = is_contiguous_v<I>;
 
     template<typename I>
-    concept bool Contiguous_iter = RA_iter<I> && Contiguous<I>;
+    concept Contiguous_iter = RA_iter<I> && Contiguous<I>;
 
 程序员（在程序库中）必须适当地定义（特征） `is_contiguous`。
 
@@ -17626,7 +17590,7 @@ GSL 中的概念都具有恰当定义的语义；请参见 Palo Alto TR 和 Rang
 清晰性。可维护性。
 用否定来表达的具有互补要求的函数是很脆弱的。
 
-##### 示例（采用 TS 版本的概念）
+##### 示例
 
 最初，人们总会试图定义带有互补要求的函数：
 
@@ -17692,21 +17656,21 @@ GSL 中的概念都具有恰当定义的语义；请参见 Palo Alto TR 和 Rang
 其定义更可读，而且更直接地对应于用户需要编写的代码。
 其中同时兼顾了类型转换。你再不需要记住所有的类型特征的名字。
 
-##### 示例（采用 TS 版本的概念）
+##### 示例
 
 你可能打算这样来定义概念 `Equality`：
 
     template<typename T> concept Equality = has_equal<T> && has_not_equal<T>;
 
-显然，直接使用标准的 `EqualityComparable` 要更好而且更容易，
+显然，直接使用标准的 `equality_comparable` 要更好而且更容易，
 但是——只是一个例子——如果你不得不定义这样的概念的话，应当这样：
 
     template<typename T> concept Equality = requires(T a, T b) {
-        bool == { a == b }
-        bool == { a != b }
+        { a == b } -> std::convertible_to<bool>;
+        { a != b } -> std::convertible_to<bool>;
         // axiom { !(a == b) == (a != b) }
         // axiom { a = b; => a == b }  // => 的意思是“意味着”
-    }
+    };
 
 而不是定义两个无意义的概念 `has_equal` 和 `has_not_equal` 仅用于帮助 `Equality` 的定义。
 “无意义”的意思是我们无法独立地指定 `has_equal` 的语义。
@@ -17729,22 +17693,22 @@ GSL 中的概念都具有恰当定义的语义；请参见 Palo Alto TR 和 Rang
 函数对象比“普通”的函数指针能够向接口传递更多的信息。
 一般来说，传递函数对象比传递函数指针能带来更好的性能。
 
-##### 示例（采用 TS 版本的概念）
+##### 示例
 
     bool greater(double x, double y) { return x > y; }
     sort(v, greater);                                    // 函数指针：可能较慢
     sort(v, [](double x, double y) { return x > y; });   // 函数对象
-    sort(v, std::greater<>);                             // 函数对象
+    sort(v, std::greater{});                             // 函数对象
 
     bool greater_than_7(double x) { return x > 7; }
     auto x = find_if(v, greater_than_7);                 // 函数指针：不灵活
     auto y = find_if(v, [](double x) { return x > 7; }); // 函数对象：携带所需数据
     auto z = find_if(v, Greater_than<double>(7));        // 函数对象：携带所需数据
 
-当然，也可以使用 `auto` 或（当可用时）概念来使这些函数通用化。例如：
+当然，也可以使用 `auto` 或概念来使这些函数通用化。例如：
 
-    auto y1 = find_if(v, [](Ordered x) { return x > 7; }); // 要求一种有序类型
-    auto z1 = find_if(v, [](auto x) { return x > 7; });    // 期望类型带有 >
+    auto y1 = find_if(v, [](totally_ordered auto x) { return x > 7; }); // 要求一种有序类型
+    auto z1 = find_if(v, [](auto x) { return x > 7; });                 // 期望类型带有 >
 
 ##### 注解
 
@@ -17766,11 +17730,11 @@ Lambda 会生成函数对象。
 
 保持接口的简单和稳定。
 
-##### 示例（采用 TS 版本的概念）
+##### 示例
 
 考虑一个带有（过度简化的）简单调试支持的 `sort`：
 
-    void sort(Sortable& s)  // 对序列 s 进行排序
+    void sort(sortable auto& s)  // 对序列 s 进行排序
     {
         if (debug) cerr << "enter sort( " << s <<  ")\n";
         // ...
@@ -17779,7 +17743,7 @@ Lambda 会生成函数对象。
 
 是否该把它重写为：
 
-    template<Sortable S>
+    template<sortable S>
         requires Streamable<S>
     void sort(S& s)  // 对序列 s 进行排序
     {
@@ -17788,7 +17752,7 @@ Lambda 会生成函数对象。
         if (debug) cerr << "exit sort( " << s <<  ")\n";
     }
 
-毕竟，`Sortable` 里面并没有要求任何 `iostream` 支持。
+毕竟，`sortable` 里面并没有要求任何 `iostream` 支持。
 而另一方面，在排序的基本概念中也没有任何东西是有关于调试的。
 
 ##### 注解
@@ -18691,7 +18655,7 @@ C++ 是不支持这样做的。
 
 ##### 理由
 
-在概念可以广泛使用之前，我们需要用 TMP 来模拟它。
+不能使用 C++20 时，我们需要用 TMP 来模拟它。
 对概念给出要求的用例（比如基于概念进行重载）是 TMP 的最常见（而且最简单）的用法。
 
 ##### 示例
@@ -18708,9 +18672,9 @@ C++ 是不支持这样做的。
 
 这种代码使用概念时将更加简单：
 
-    void advance(RandomAccessIterator p, int n) { p += n; }
+    void advance(random_access_iterator auto p, int n) { p += n; }
 
-    void advance(ForwardIterator p, int n) { assert(n >= 0); while (n--) ++p;}
+    void advance(forward_iterator auto p, int n) { assert(n >= 0); while (n--) ++p;}
 
 ##### 强制实施
 
@@ -19599,7 +19563,26 @@ C++ 比 C 的表达能力更强，而且为许多种类的编程都提供了更�
 
 ##### 示例
 
-    ???
+    // 文件 foo.h:
+    namespace
+    {
+        const double x = 1.234;  // 不好
+
+        double foo(double y)     // 不好
+        {
+            return y + x;
+        }
+    }
+
+    namespace Foo
+    {
+        const double x = 1.234; // 好
+
+        inline double foo(double y)        // 好
+        {
+            return y + x;
+        }
+    }
 
 ##### 强制实施
 
@@ -19846,7 +19829,7 @@ C 数组不那么安全，而且相对于 `array` 和 `vector` 也没有什么�
         array<int, 10> a, b, c{};       // c 被初始化为零
         a.fill(0);
         fill(b.begin(), b.end(), 0);    // std::fill()
-        fill(b, 0);                     // std::fill() + Ranges TS
+        fill(b, 0);                     // std::ranges::fill()
 
         if ( a == b ) {
           // ...
@@ -21232,27 +21215,25 @@ GSL 组件概览：
 Andrew Sutton 的 Origin 程序库，
 Range 提案，
 以及 ISO WG21 的 Palo Alto TR。
-它们可能会与 ISO C++ 标准中将会提供的概念十分相似。
-它们的写法依照 ISO WG21 的 [Concepts TS](http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/n4553.pdf)。
-下列概念中的大多数都定义在 [Ranges TS](http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2016/n4569.pdf) 中。
+其中许多都与已在 C++20 中成为 ISO C++ 标准的概念十分相似。
 
-* `Range`
-* `String`   // ???
-* `Number`   // ???
-* `Sortable`
-* `EqualityComparable`
-* `Convertible`
-* `Common`
+* `String`
+* `Number`
 * `Boolean`
-* `Integral`
-* `SignedIntegral`
-* `SemiRegular` // C++20 中为 `std::semiregular`
-* `Regular`     // C++20 中为 `std::regular`
-* `TotallyOrdered`
-* `Function`
-* `RegularFunction`
-* `Predicate`
-* `Relation`
+* `Range`              // C++20 中为 `std::ranges::range`
+* `Sortable`           // C++20 中为 `std::sortable`
+* `EqualityComparable` // C++20 中为 `std::equality_comparable`
+* `Convertible`        // C++20 中为 `std::convertible_to`
+* `Common`             // C++20 中为 `std::common_with`
+* `Integral`           // C++20 中为 `std::integral`
+* `SignedIntegral`     // C++20 中为 `std::signed_integral`
+* `SemiRegular`        // C++20 中为 `std::semiregular`
+* `Regular`            // C++20 中为 `std::regular`
+* `TotallyOrdered`     // C++20 中为 `std::totally_ordered`
+* `Function`           // C++20 中为 `std::invocable`
+* `RegularFunction`    // C++20 中为 `std::regular_invocable`
+* `Predicate`          // C++20 中为 `std::predicate`
+* `Relation`           // C++20 中为 `std::relation`
 * ...
 
 ### <a name="SS-gsl-smartptrconcepts"></a>GSL.ptr: 智能指针概念
@@ -21261,7 +21242,7 @@ Range 提案，
 * `Unique_pointer`  // 符合 `Pointer` 的类型，可移动但不可复制
 * `Shared_pointer`   // 符合 `Pointer` 的类型，可复制
 
-# <a name="S-naming"></a>NL: 命名和代码布局规则
+# <a name="S-naming"></a>NL: 命名和代码布局建议
 
 维持一致的命名和代码布局是很有用的。
 即便不为其他原因，也可以减少“我的代码风格比你的好”这类的纷争。
