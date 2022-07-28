@@ -1,6 +1,6 @@
 # <a name="main"></a>C++ 核心指导方针
 
-2022/1/3
+2022/7/13
 
 
 编辑：
@@ -2436,7 +2436,6 @@ C++ 程序员应当熟知标准库的基本知识，并在适当的时候加以�
     auto lessT = [](T x, T y) { return x.rank() < y.rank() && x.value() < y.value(); };
 
     sort(a, b, lessT);
-    find_if(a, b, lessT);
 
 对于性能和可维护性来说，最简短的代码并不总是最好的选择。
 
@@ -2931,30 +2930,10 @@ C++ 标准库隐含地对 C 标准库中的所有函数做了这件事。
 
     void sink(unique_ptr<widget>);  // 仅作输入，但移动了这个 widget 的所有权
 
-避免以下这类的“玄奥技巧”：
-
-* “为了效率”而按 `T&&` 来传递参数。
-  关于按 `&&` 传递带来性能好处的大多数传言都是假的或者是脆弱的（不过也请参考 [F.18](#Rf-consume) 和 [F.19](#Rf-forward)）。
-* 从赋值或相似的操作中返回 `const T&`（参见 [F.47](#Rf-assignment-op)）。
-
-##### 示例
-
-假设 `Matrix` 带有移动操作（可能它将其元素都保存在一个 `std::vector` 中）：
-
-    Matrix operator+(const Matrix& a, const Matrix& b)
-    {
-        Matrix res;
-        // ... 用二者的和填充 res ...
-        return res;
-    }
-
-    Matrix x = m1 + m2;  // 移动构造函数
-
-    y = m3 + m3;         // 移动赋值
+避免“为了效率”而按 `T&&` 来传递参数这类的“玄奥技巧”。
+关于按 `&&` 传递带来性能好处的大多数传言都是假的或者是脆弱的（不过也请参考 [F.18](#Rf-consume) 和 [F.19](#Rf-forward)）。
 
 ##### 注解
-
-返回值优化无法处理赋值的情况，不过移动赋值却可以。
 
 可以假定引用都指代了某个有效对象（语言规则）。
 “空引用”（正规地说）是不存在的。
@@ -3110,6 +3089,26 @@ C++ 标准库隐含地对 C 标准库中的所有函数做了这件事。
 
 ##### 示例
 
+假设 `Matrix` 带有移动操作（可能它将其元素都保存在一个 `std::vector` 中）：
+
+    Matrix operator+(const Matrix& a, const Matrix& b)
+    {
+        Matrix res;
+        // ... 用二者的和填充 res ...
+        return res;
+    }
+
+    Matrix x = m1 + m2;  // 移动构造函数
+
+    y = m3 + m3;         // 移动赋值
+
+
+##### 注解
+
+返回值优化无法处理赋值的情况，不过移动赋值却可以。
+
+##### 示例
+
     struct Package {      // 特殊情况: 移动操作昂贵的对象
         char header[16];
         char load[2024 - 16];
@@ -3233,6 +3232,39 @@ C++98 的标准库已经使用这种风格了，因为 `pair` 就像一种两个
 
 * 输出参数应当被替换为返回值。
   输出参数时由函数写入的，调用了非 `const` 成员函数的，或者将它作为非 `const` 参数继续传递的参数。
+
+### <a name="Rf-ptr-ref"></a>F.60: 当“没有参数”是有效的选项时，采用 `T*` 优先于 `T&`
+
+##### 理由
+
+指针（`T*`）可能为 `nullptr`，而引用（`T&`）则不能，不存在合法的“空引用”。
+有时候用 `nullptr` 作为一种代表“没有对象”的方式是有用处的，但若是没有这种情况的话，使用引用的写法更简单，而且可能会产生更好的代码。
+
+##### 示例
+
+    string zstring_to_string(zstring p) // zstring 就是 char*; 这是一个 C 风格的字符串
+    {
+        if (!p) return string{};    // p 可能为 nullptr; 别忘了要检查
+        return string{p};
+    }
+
+    void print(const vector<int>& r)
+    {
+        // r 指代一个 vector<int>; 不需要检查
+    }
+
+##### 注解
+
+构造出一个本质上是 `nullptr` 的引用是可能的，但不是合法的 C++ 代码（比如，`T* p = nullptr; T& r = *p;`）。
+这种错误非常罕见。
+
+##### 注解
+
+如果你更喜欢指针写法（`->` 以及 `*` vs. `.`）的话，`not_null<T*>` 可以提供和 `T&` 相同的保证。
+
+##### 强制实施
+
+* Flag ???
 
 ### <a name="Rf-ptr"></a>F.22: 用 `T*`，`owner<T*>` 或者智能指针来代表一个对象
 
@@ -3471,39 +3503,6 @@ C 风格的字符串非常普遍。它们是按一种约定方式定义的：就
 ##### 强制实施
 
 【无法强制实施】 这种模式过于复杂，无法可靠地进行检测。
-
-### <a name="Rf-ptr-ref"></a>F.60: 当“没有参数”是有效的选项时，采用 `T*` 优先于 `T&`
-
-##### 理由
-
-指针（`T*`）可能为 `nullptr`，而引用（`T&`）则不能，不存在合法的“空引用”。
-有时候用 `nullptr` 作为一种代表“没有对象”的方式是有用处的，但若是没有这种情况的话，使用引用的写法更简单，而且可能会产生更好的代码。
-
-##### 示例
-
-    string zstring_to_string(zstring p) // zstring 就是 char*; 这是一个 C 风格的字符串
-    {
-        if (!p) return string{};    // p 可能为 nullptr; 别忘了要检查
-        return string{p};
-    }
-
-    void print(const vector<int>& r)
-    {
-        // r 指代一个 vector<int>; 不需要检查
-    }
-
-##### 注解
-
-构造出一个本质上是 `nullptr` 的引用是可能的，但不是合法的 C++ 代码（比如，`T* p = nullptr; T& r = *p;`）。
-这种错误非常罕见。
-
-##### 注解
-
-如果你更喜欢指针写法（`->` 以及 `*` vs. `.`）的话，`not_null<T*>` 可以提供和 `T&` 相同的保证。
-
-##### 强制实施
-
-* Flag ???
 
 ### <a name="Rf-return-ptr"></a>F.42: 返回 `T*` 来（仅仅）给出一个位置
 
@@ -4481,7 +4480,7 @@ C 风格的字符串非常普遍。它们是按一种约定方式定义的：就
 
 ##### 注解
 
-优先让 `public` 成员在前，`protected` 成员其次，`private` 成员在后[参见](#Rl-order)。
+优先让 `public` 成员在前，`protected` 成员其次，`private` 成员在后；参见 [NL.16](#Rl-order)。
 
 ##### 强制实施
 
@@ -4997,12 +4996,18 @@ C++ 内建类型都是正规的，标准程序库的一些类型，如 `string`�
 
 ##### 示例
 
-    ???
+    class legacy_class
+    {
+        foo* m_owning;   // 不好：改为 unique_ptr<T> 或 owner<T*>
+        bar* m_observer; // OK：不用改
+    }
+
+唯一确定所有权的方式可能就是深入代码中去寻找内存分配了。
 
 ##### 注解
 
-如果 `T*` 或 `T&` 是有所有权的，就将其标为 `owning`。如果 `T*` 没有所有权，考虑将其标为 `ptr`。
-这将有助于文档和分析工作。
+所有权在新代码（以及重构的遗留代码）中应当是清晰的：[R.20](#Rr-owner) 对于有所有权指针，
+[R.3](#Rr-ptr) 对于无所有权指针。引用从来不能有所有权，[R.4](#Rr-ref)。
 
 ##### 强制实施
 
@@ -6164,11 +6169,11 @@ C++11 的初始化式列表规则免除了对许多构造函数的需求。例�
 
 ##### 示例
 
-    template<typename T>
     class X {   // OK: 值语义
     public:
         X();
         X(X&& a) noexcept;  // 移动 X
+        X& operator=(X&& a) noexcept; // 移动赋值 X
         void modify();     // 改变 X 的值
         // ...
         ~X() { delete[] p; }
@@ -6177,8 +6182,7 @@ C++11 的初始化式列表规则免除了对许多构造函数的需求。例�
         int sz;
     };
 
-
-    X::X(X&& a)
+    X::X(X&& a) noexcept
         :p{a.p}, sz{a.sz}  // 窃取其表示
     {
         a.p = nullptr;     // 设其为“空”
@@ -8444,7 +8448,7 @@ C++ 语义中的很多部分都假定了其默认的含义。
 
 如果你要“折腾”运算符 `&` 的话，请保证其定义和 `->`，`[]`，`*` 和 `.` 在结果类型上具有匹配的含义。
 注意，运算符 `.` 现在是无法重载的，因此不可能做出一个完美的系统。
-我们打算修正这一点： <http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/n4477.pdf>。
+我们打算修正这一点： [Operator Dot (R2)](http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/n4477.pdf)。
 注意 `std::addressof()` 总会产生一个内建指针。
 
 ##### 强制实施
@@ -15633,7 +15637,7 @@ lambda 表达式会产生一个带有存储的闭包对象，它通常在运行�
 * [E.13: 不要在作为某个对象的直接所有者时抛出异常](#Re-never-throw)
 * [E.14: 应当使用为目的所设计的自定义类型（而不是内建类型）作为异常](#Re-exception-types)
 * [E.15: 按值抛出并按引用捕获类型层次中的异常](#Re-exception-ref)
-* [E.16: 析构函数，回收函数，以及 `swap` 决不能失败](#Re-never-fail)
+* [E.16: 析构函数，回收函数，`swap`，以及异常类型的复制/移动构造决不能失败](#Re-never-fail)
 * [E.17: 不要试图在每个函数中捕获每个异常](#Re-not-always)
 * [E.18: 最小化对 `try`/`catch` 的显式使用](#Re-catch)
 * [E.19: 当没有合适的资源包装时，使用 `final_action` 对象来表达清理动作](#Re-finally)
@@ -16100,11 +16104,11 @@ RAII（Resource Acquisition Is Initialization，资源获取即初始化）是�
 * 对按值捕获具有虚函数的类型进行标记。
 * 对抛出原始指针进行标记。
 
-### <a name="Re-never-fail"></a>E.16: 析构函数，回收函数，以及 `swap` 决不能失败
+### <a name="Re-never-fail"></a>E.16: 析构函数，回收函数，`swap`，以及异常类型的复制/移动构造决不能失败
 
 ##### 理由
 
-如果析构函数，`swap`，或者内存回收函数会失败，就是说如果它通过异常而退出，或者根本不会实施其所需的动作，我们不知道应当如何编写可靠的程序。
+如果析构函数，`swap`，内存回收，或者尝试复制/移动异常对象时会失败，就是说如果它会通过异常而退出，或者根本不会实施其所需的动作，我们就将不知道应当如何编写可靠的程序。
 
 ##### 示例，请勿如此
 
@@ -16133,14 +16137,17 @@ RAII（Resource Acquisition Is Initialization，资源获取即初始化）是�
 
 ##### 注解
 
-回收函数，包括 `operator delete`，必须为 `noexcept`。`swap` 函数必须为 `noexcept`。
-大多数的析构函数都是缺省隐含为 `noexcept` 的。
-而且，[应该使移动操作为 `noexcept`](#Rc-move-noexcept)。
+* 回收函数，包括 `operator delete`，必须为 `noexcept`。
+* `swap` 函数必须为 `noexcept`。
+* 大多数的析构函数都是缺省隐含为 `noexcept` 的。
+* 而且，[应该使移动操作为 `noexcept`](#Rc-move-noexcept)。
+* 当编写用作异常类型的类型时，确保其复制构造函数不为 `noexcept`。一般来说我们没法机制化地强制这一点，因为我们并不了解一个类型是否有意作为一种异常类型。
+* 尝试避免抛出复制构造函数不为 `noexcept` 的类型。一般来说我们没法机制化地强制这一点，因为即便 `throw std::string(...)` 也可能抛异常，虽然实际上并不会。
 
 ##### 强制实施
 
-识别会 `throw` 的析构函数，回收操作，和 `swap`。
-识别不为 `noexcept` 的这类操作。
+* 识别会 `throw` 的析构函数，回收操作，和 `swap`。
+* 识别不为 `noexcept` 的这类操作。
 
 **参见**: [讨论](#Sd-never-fail)
 
@@ -16217,14 +16224,14 @@ RAII（Resource Acquisition Is Initialization，资源获取即初始化）是�
 
 ##### 理由
 
-`finally` 要比 `try`/`catch` 更不啰嗦且难于搞错。
+[GSL](#S-gsl) 提供的 `finally` 要比 `try`/`catch` 更不啰嗦且难于搞错。
 
 ##### 示例
 
     void f(int n)
     {
         void* p = malloc(n);
-        auto _ = finally([p] { free(p); });
+        auto _ = gsl::finally([p] { free(p); });
         // ...
     }
 
@@ -17994,7 +18001,7 @@ Lambda 会生成函数对象。
         // ...
     }
 
-    // Equivalent to:
+    // 等价于：
     template<Integral T>
     void f(T v)
     {
@@ -20309,6 +20316,14 @@ C11 定义了一些“可选扩展”，它们对其实参进行一些额外检�
 
 对于 `cin`/`cout`（或同等设备）的交互来说，没什么原因必须进行冲洗；它们是自动进行的。
 对于向文件写入来说，也很少需要 `flush`。
+
+##### 注解
+
+对于字符串流（指 `ostringstream`），插入一个 `endl` 完全等价于
+插入一个 `'\n'` 字符，但正是这种情况下，`endl` 可能会明显比较慢。
+
+`endl` *并不*关注产生平台专有的行结尾序列（比如 Windows 上的 "\r\n"）。
+因此，字符串流的 `s << endl` 只会插入*单个* `'\n'` 字符。
 
 ##### 注解
 
