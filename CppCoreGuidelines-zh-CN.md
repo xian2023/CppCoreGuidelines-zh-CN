@@ -1,7 +1,6 @@
 # <a name="main"></a>C++ 核心指导方针
 
-2022/7/13
-
+2022/10/6
 
 编辑：
 
@@ -2350,6 +2349,8 @@ C++ 程序员应当熟知标准库的基本知识，并在适当的时候加以�
 * [F.7: 对于常规用法，应当接受 `T*` 或 `T&` 参数而不是智能指针](#Rf-smart)
 * [F.8: 优先采用纯函数](#Rf-pure)
 * [F.9: 未使用的形参应当没有名字](#Rf-unused)
+* [F.10: 若操作可被重用，则应为其命名](#Rf-name)
+* [F.11: 当需要仅在一处使用的简单函数对象时使用无名 lambda]([#Rf-lambda)
 
 参数传递表达式的规则：
 
@@ -2380,6 +2381,7 @@ C++ 程序员应当熟知标准库的基本知识，并在适当的时候加以�
 * [F.46: `int` 是 `main()` 的返回类型](#Rf-main)
 * [F.47: 赋值运算符返回 `T&`](#Rf-assignment-op)
 * [F.48: 不要用 `return std::move(local)`](#Rf-return-move-local)
+* [F.49: 不要返回 `const T`](#Rf-return-const)
 
 其他函数规则：
 
@@ -2870,6 +2872,91 @@ C++ 标准库隐含地对 C 标准库中的所有函数做了这件事。
 
 对有名字的未使用形参进行标记。
 
+### <a name="Rf-name"></a>F.10: 若操作可被重用，则应为其命名
+
+##### 理由
+
+文档，可读性，重用机会。
+
+##### 示例
+
+    struct Rec {
+        string name;
+        string addr;
+        int id;         // 唯一标识符
+    };
+
+    bool same(const Rec& a, const Rec& b)
+    {
+        return a.id == b.id;
+    }
+
+    vector<Rec*> find_id(const string& name);    // 寻找“name”的所有记录
+
+    auto x = find_if(vr.begin(), vr.end(),
+        [&](Rec& r) {
+            if (r.name.size() != n.size()) return false; // 要比较的名字在 n 里
+            for (int i = 0; i < r.name.size(); ++i)
+                if (tolower(r.name[i]) != tolower(n[i])) return false;
+            return true;
+        }
+    );
+
+这里蕴含着一个有用的函数（大小写不敏感的字符串比较），lambda 的参数变大时总会这样。
+
+    bool compare_insensitive(const string& a, const string& b)
+    {
+        if (a.size() != b.size()) return false;
+        for (int i = 0; i < a.size(); ++i) if (tolower(a[i]) != tolower(b[i])) return false;
+        return true;
+    }
+
+    auto x = find_if(vr.begin(), vr.end(),
+        [&](Rec& r) { compare_insensitive(r.name, n); }
+    );
+
+或者可以这样（如果你倾向于避免隐含绑定到 `n` 的名字）：
+
+    auto cmp_to_n = [&n](const string& a) { return compare_insensitive(a, n); };
+
+    auto x = find_if(vr.begin(), vr.end(),
+        [](const Rec& r) { return cmp_to_n(r.name); }
+    );
+
+##### 注解
+
+函数、lambda 或运算符均如此。
+
+##### 例外
+
+* 逻辑上仅在局部使用的 lambda，比如作为 `for_each` 或类似控制流算法的实参。
+* 作为[初始化](#???)的 lambda。
+
+##### 强制实施
+
+* 【困难】 标记相似的 lambda
+* ???
+
+### <a name="Rf-lambda"></a>F.11: 当需要仅在一处使用的简单函数对象时使用无名 lambda
+
+##### 理由
+
+使代码精简，提供比其他方式更好的局部性。
+
+##### 示例
+
+    auto earlyUsersEnd = std::remove_if(users.begin(), users.end(),
+                                        [](const User &a) { return a.id > 100; });
+
+
+##### 例外
+
+为 lambda 命名有助于明晰代码，即便它仅用一次。
+
+##### 强制实施
+
+* 寻找相同或几乎相同的 lambda（以将它们替换为具名的函数或者具名的 lambda）。
+
 ## <a name="SS-call"></a>F.call: 参数传递
 
 存在各种不同的向函数传递参数和返回值的方式。
@@ -2955,6 +3042,18 @@ C++ 标准库隐含地对 C 标准库中的所有函数做了这件事。
 ##### 示例
 
     void update(Record& r);  // 假定 update 将会写入 r
+
+##### 注解
+
+一些用户定义和标准程序库的类型，如 `span<T>` 或迭代器等，
+是[可廉价复制](#Rf-in)的，并可按值传递，
+这样做时具有可改动（in-out）引用语义：
+
+    void increment_all(span<int> a)
+    {
+      for (auto&& e : a)
+        ++e;
+    }
 
 ##### 注解
 
@@ -3062,25 +3161,6 @@ C++ 标准库隐含地对 C 标准库中的所有函数做了这件事。
 
 含有许多（每个都廉价移动的）元素的 `struct`，聚合起来则可能是移动操作昂贵的。
 
-##### 注解
-
-不建议返回 `const` 值。
-这种老旧的建议已经过时了；它并不会带来什么价值，而且还会对移动语义造成影响。
-
-    const vector<int> fct();    // 不好: 这个 "const" 带来的麻烦超过其价值
-
-    void g(vector<int>& vx)
-    {
-        // ...
-        fct() = vx;   // 被 "const" 所禁止
-        // ...
-        vx = fct(); // 昂贵的复制："const" 抑制掉了移动语义
-        // ...
-    }
-
-要求对返回值添加 `const` 的理由是可以防止（非常少见的）对临时对象的意外访问。
-而反对的理由则是它妨碍了（非常常见的）对移动语义的利用。
-
 ##### 例外
 
 * 对于非具体类型，比如继承层次中的类型来说，可以用 `unique_ptr` 或 `shared_ptr` 来返回对象。
@@ -3123,7 +3203,6 @@ C++ 标准库隐含地对 C 标准库中的所有函数做了这件事。
 ##### 强制实施
 
 * 对于指代非 `const` 的引用参数，如果其被写入之前未进行过读取，而且其类型能够廉价地返回，则标记它们；它们应当是“输入”的返回值。
-* 标记 `const` 返回值。修正方法：移除 `const` 使其变为返回非 `const` 值。
 
 ### <a name="Rf-out-multi"></a>F.21: 要返回多个“输出”值，优先返回结构体或元组（tuple）
 
@@ -3147,7 +3226,7 @@ C++ 标准库隐含地对 C 标准库中的所有函数做了这件事。
     tuple<int, string> f(const string& input)
     {
         // ...
-        return make_tuple(status, something());
+        return {status, something()};
     }
 
 C++98 的标准库已经使用这种风格了，因为 `pair` 就像一种两个元素的 `tuple` 一样。
@@ -3176,14 +3255,14 @@ C++98 的标准库已经使用这种风格了，因为 `pair` 就像一种两个
 显式传递一个输入/输出参数再让其作为返回值返回出来通常是没必要的。
 例如：
 
-    istream& operator>>(istream& is, string& s);    // 与 std::operator>>() 很相似
+    istream& operator>>(istream& in, string& s);    // 与 std::operator>>() 很相似
 
-    for (string s; cin >> s; ) {
+    for (string s; in >> s; ) {
         // 对文本行做些事
     }
 
-这里，`s` 和 `cin` 都用作了输入/输出参数。
-`cin` 按（非 `const`）引用来传递，以便可以操作其状态。
+这里，`s` 和 `in` 都用作了输入/输出参数。
+`in` 按（非 `const`）引用来传递，以便可以操作其状态。
 `s` 的传递是为避免重复进行分配。
 通过重用 `s`（按引用传递），我们只需要在为扩展 `s` 的容量时才会分配新的内存。
 这种技巧有时候被称为“调用方分配的输出参数”模式，它特别适合于
@@ -3191,11 +3270,11 @@ C++98 的标准库已经使用这种风格了，因为 `pair` 就像一种两个
 
 比较一下，如果所有的值都按返回值传递出来的话，得像如下这样做：
 
-    pair<istream&, string> get_string(istream& is)  // 不建议这样做
+    pair<istream&, string> get_string(istream& in)  // 不建议这样做
     {
         string s;
-        is >> s;
-        return {is, s};
+        in >> s;
+        return {in, move(s)};
     }
 
     for (auto p = get_string(cin); p.first; ) {
@@ -3227,6 +3306,29 @@ C++98 的标准库已经使用这种风格了，因为 `pair` 就像一种两个
 只有当返回的值表现的是几个无关实体而不是某个抽象的时候，才应使用过于通用的 `pair` 和 `tuple`。
 
 作为另一个例子，应当使用像 `variant<T, error_code>` 这样的专门的类型，而不使用通用的 `tuple`。
+
+##### 注解
+
+当所要返回的元组是从复制操作昂贵的局部变量进行初始化时，
+可以用显式 `move` 有效避免复制：
+
+    pair<LargeObject, LargeObject> f(const string& input)
+    {
+        LargeObject large1 = g(input);
+        LargeObject large2 = h(input);
+        // ...
+        return { move(large1), move(large2) }; // 没有复制
+    }
+
+还可以：
+
+    pair<LargeObject, LargeObject> f(const string& input)
+    {
+        // ...
+        return { g(input), h(input) }; // 没有复制，没有移动
+    }
+
+请注意这与 [ES.56](#Res-move) 的 `return move(...)` 反模式是不同的。
 
 ##### 强制实施
 
@@ -3792,7 +3894,6 @@ C 风格的字符串非常普遍。它们是按一种约定方式定义的：就
 应当通过工具对所有赋值运算符的返回类型（和返回值）进行检查
 来强制实施。
 
-
 ### <a name="Rf-return-move-local"></a>F.48: 不要用 `return std::move(local)`
 
 ##### 理由
@@ -3818,6 +3919,35 @@ C 风格的字符串非常普遍。它们是按一种约定方式定义的：就
 ##### 强制实施
 
 应当通过工具对返回语句进行检查来强制实施。
+
+### <a name="Rf-return-const"></a>F.49: 不要返回 `const T`
+
+##### 理由
+
+不建议返回 `const` 值。
+这种老旧的建议已经过时了；它并不会带来什么价值，而且还会对移动语义造成影响。
+
+##### 示例
+
+    const vector<int> fct();    // 不好: 这个 "const" 带来的麻烦超过其价值
+
+    void g(vector<int>& vx)
+    {
+        // ...
+        fct() = vx;   // 被 "const" 所禁止
+        // ...
+        vx = fct(); // 昂贵的复制："const" 抑制掉了移动语义
+        // ...
+    }
+
+要求对返回值添加 `const` 的理由是可以防止（非常少见的）对临时对象的意外访问。
+而反对的理由则是它妨碍了（非常常见的）对移动语义的利用。
+
+**另见**: [F.20，有关“out”输出值的一般条款](#Rf-out)
+
+##### 强制实施
+
+* 标记 `const` 返回值。修正方法：移除 `const` 使其变为返回非 `const` 值。
 
 
 ### <a name="Rf-capture-vs-overload"></a>F.50: 当函数不适用时（不能俘获局部变量，或者不能编写局部函数），就使用 Lambda
@@ -3954,6 +4084,12 @@ C 风格的字符串非常普遍。它们是按一种约定方式定义的：就
     // 由于为局部变量建立了副本，它将在
     // 函数调用的全部时间内可用。
     thread_pool.queue_work([=] { process(local); });
+
+##### 注解
+
+如果必须捕获非局部指针，则应考虑使用 `unique_ptr`；它会处理生存期和同步问题。
+
+如果必须捕获 `this` 指针，则应考虑使用 `[*this]` 捕获，它会创建整个对象的一个副本。
 
 ##### 强制实施
 
@@ -4280,7 +4416,7 @@ C 风格的字符串非常普遍。它们是按一种约定方式定义的：就
 语言规定 `virtual` 函数为成员函数，而并非所有的 `virtual` 函数都会直接访问数据。
 特别是，抽象类的成员很少这样做。
 
-注意 [multi methods](https://parasol.tamu.edu/~yuriys/papers/OMM10.pdf)。
+注意 [multi methods](https://web.archive.org/web/20200605021759/https://parasol.tamu.edu/~yuriys/papers/OMM10.pdf)。
 
 ##### 例外
 
@@ -5461,9 +5597,9 @@ C++11 的初始化式列表规则免除了对许多构造函数的需求。例�
         Date() = default; // [参见](#Rc-default)
         // ...
     private:
-        int dd = 1;
-        int mm = 1;
-        int yyyy = 1970;
+        int dd {1};
+        int mm {1};
+        int yyyy {1970};
         // ...
     };
 
@@ -5583,9 +5719,9 @@ C++11 的初始化式列表规则免除了对许多构造函数的需求。例�
         Vector1(int n) :elem{new T[n]}, space{elem + n}, last{elem} {}
         // ...
     private:
-        own<T*> elem = nullptr;
-        T* space = nullptr;
-        T* last = nullptr;
+        own<T*> elem {};
+        T* space {};
+        T* last {};
     };
 
 表示为 `{nullptr, nullptr, nullptr}` 的 `Vector1{}` 很廉价，但这是一种特殊情况并且隐含了运行时检查。
@@ -5614,8 +5750,8 @@ C++11 的初始化式列表规则免除了对许多构造函数的需求。例�
 ##### 示例
 
     class X2 {
-        string s = "default";
-        int i = 1;
+        string s {"default"};
+        int i {1};
     public:
         // 使用编译期生成的默认构造函数
         // ...
@@ -6255,8 +6391,8 @@ ISO 标准中对标准库容器类仅仅保证了“有效但未指明”的状�
     // 从 other.ptr 移动到 this->ptr
     T* temp = other.ptr;
     other.ptr = nullptr;
-    delete ptr;
-    ptr = temp;
+    delete ptr; // 在自移动情况中，this->ptr 也为 null；delete 是空操作
+    ptr = temp; // 在自移动情况中，恢复了原 ptr
 
 ##### 强制实施
 
@@ -6645,6 +6781,7 @@ ISO 标准中对标准库容器类仅仅保证了“有效但未指明”的状�
     class B {
         string name;
         int number;
+    public:
         virtual bool operator==(const B& a) const
         {
              return name == a.name && number == a.number;
@@ -6654,11 +6791,12 @@ ISO 标准中对标准库容器类仅仅保证了“有效但未指明”的状�
 
 `B` 的比较函数接受对其第二个操作数的类型转换，但第一个则并非如此。
 
-    class D : B {
+    class D : public B {
         char character;
+    public:
         virtual bool operator==(const D& a) const
         {
-            return name == a.name && number == a.number && character == a.character;
+            return B::operator==(a) && character == a.character;
         }
         // ...
     };
@@ -6666,7 +6804,7 @@ ISO 标准中对标准库容器类仅仅保证了“有效但未指明”的状�
     B b = ...
     D d = ...
     b == d;    // 比较了 name 和 number，但忽略了 d 的 character
-    d == b;    // 错误: 未定义 ==
+    d == b;    // 比较了 name 和 number，但忽略了 d 的 character
     D d2;
     d == d2;   // 比较了 name、number 和 character
     B& b2 = d2;
@@ -6940,6 +7078,8 @@ Lambda 表达式（通常通俗地简称为“lambda”）是一种产生函数�
 
 概要：
 
+* [F.10: 若操作可被重用，则应为其命名](#Rf-name)
+* [F.11: 当需要仅在一处使用的简单函数对象时使用无名 lambda]([#Rf-lambda)
 * [F.50: 无法用函数达成（捕捉局部变量，或者编写局部函数）时，应使用 lambda](#Rf-capture-vs-overload)
 * [F.52: 在将被局部范围内使用（包括将之传递给算法）的 lambda 中优先按引用捕捉](#Rf-reference-capture)
 * [F.53: 在不被局部范围内使用（包括存储在堆上，或传递给其他线程）的 lambda 中避免按引用捕捉](#Rf-value-capture)
@@ -8505,23 +8645,21 @@ C++ 语义中的很多部分都假定了其默认的含义。
 ##### 示例
 
     struct S { };
-    bool operator==(S, S);   // OK: 和 S 在相同的命名空间，甚至紧跟着 S
+    S operator+(S, S);   // OK: 和 S 在相同的命名空间，甚至紧跟着 S
     S s;
 
-    bool x = (s == s);
-
-如果有默认的 == 的话，这正是默认的 == 所做的。
+    S r = s + s;
 
 ##### 示例
 
     namespace N {
         struct S { };
-        bool operator==(S, S);   // OK: 和 S 在相同的命名空间，甚至紧跟着 S
+        S operator+(S, S);   // OK: 和 S 在相同的命名空间，甚至紧跟着 S
     }
 
     N::S s;
 
-    bool x = (s == s);  // 通过 ADL 找到了 N::operator==()
+    S r = s + s;  // 通过 ADL 找到了 N::operator+()
 
 ##### 示例，不好
 
@@ -8529,13 +8667,13 @@ C++ 语义中的很多部分都假定了其默认的含义。
     S s;
 
     namespace N {
-        S::operator!(S a) { return true; }
-        S not_s = !s;
+        bool operator!(S a) { return true; }
+        bool not_s = !s;
     }
 
     namespace M {
-        S::operator!(S a) { return false; }
-        S not_s = !s;
+        bool operator!(S a) { return false; }
+        bool not_s = !s;
     }
 
 这里的 `!s` 的含义在 `N` 和 `M` 中是不同的。
@@ -9428,8 +9566,30 @@ C 风格的字符串是以单个指向以零结尾的字符序列的指针来传
 
 ##### 强制实施
 
-* 【中级】 如果分配了某个对象，又在函数内的所有路径中都进行了回收，则给出警告。建议它应当被代之以一个局部的 `auto` 栈对象。
+* 【中级】 如果分配了某个对象，又在函数内的所有路径中都进行了回收，则给出警告。建议它应当被代之以一个局部的栈对象。
 * 【简单】 当局部的 `Unique_pointer` 或 `Shared_pointer` 在其生存期结束前未被移动、复制、赋值或 `reset`，则给出警告。
+例外：不对指向无界数组的局部 `Unique_pointer` 产生这种警告。（见下文）
+
+##### 例外
+
+创建指向堆分配缓冲区的局部 `const unique_ptr<T[]>` 是没问题的，这是一种有效的表现有作用域的动态数组的方法。
+
+##### 示例
+
+一个局部 `const unique_ptr<T[]>` 变量的有效用例：
+
+    int get_median_value(const std::list<int>& integers)
+    {
+      const auto size = integers.size();
+
+      // OK: declaring a local unique_ptr<T[]>.
+      const auto local_buffer = std::make_unique_for_overwrite<int[]>(size);
+
+      std::copy_n(begin(integers), size, local_buffer.get());
+      std::nth_element(local_buffer.get(), local_buffer.get() + size/2, local_buffer.get() + size);
+
+      return local_buffer[size/2];
+    }
 
 ### <a name="Rr-global"></a>R.6: 避免非 `const` 的全局变量
 
@@ -9510,7 +9670,7 @@ C 风格的字符串是以单个指向以零结尾的字符序列的指针来传
 
 ##### 示例，不好
 
-    void f(const string& name)
+    void func(const string& name)
     {
         FILE* f = fopen(name, "r");            // 打开文件
         vector<char> buf(1024);
@@ -9522,7 +9682,7 @@ C 风格的字符串是以单个指向以零结尾的字符序列的指针来传
 
 ##### 示例
 
-    void f(const string& name)
+    void func(const string& name)
     {
         ifstream f{name};   // 打开文件
         vector<char> buf(1024);
@@ -10984,11 +11144,12 @@ C++17 的规则多少会少些意外：
         // ... 未对 p2 赋值 ...
         vector<int> v(7);
         v.at(7) = 0;                    // 抛出异常
+        delete p2;                      // 避免泄漏已太晚了
         // ...
     }
 
 当 `leak == true` 时，`p2` 所指向的对象就会泄漏，而 `p1` 所指向的对象则不会。
-当 `at()` 抛出异常时也是同样的情况。
+当 `at()` 抛出异常时也是同样的情况。两种情况下，都没能到达 `delete p2` 语句。
 
 ##### 强制实施
 
@@ -13516,7 +13677,7 @@ C 风格的强制转换很危险，因为它可以进行任何种类的转换，
 
 ##### 注解
 
-内建数组使用有符号的下标。
+内建数组允许有符号的下标。
 标准库容器使用无符号的下标。
 因此没有完美的兼容解决方案（除非将来某一天，标准库容器改为使用有符号下标了）。
 鉴于无符号和混合符号方面的已知问题，最好坚持使用（有符号）并且足够大的整数，而 `gsl::index` 保证了这点。
@@ -15618,7 +15779,7 @@ lambda 表达式会产生一个带有存储的闭包对象，它通常在运行�
 * 类型违规（比如对 `union` 和强制转换的误用）
 * 资源泄漏（包括内存泄漏）
 * 边界错误
-* 生存期错误（比如在对象以被 `delete` 后进行访问）
+* 生存期错误（比如在对象被 `delete` 后访问它）
 * 复杂性错误（可能由于过于复杂的想法表达而导致的逻辑错误）
 * 接口错误（比如通过接口传递了预期外的值）
 
@@ -16097,7 +16258,7 @@ RAII（Resource Acquisition Is Initialization，资源获取即初始化）是�
 
 ##### 注解
 
-重新抛出已捕获的异常应当使用 `throw;` 而非 `throw e;`。使用 `throw e;` 将会抛出 `e` 的一个新副本（并切片成静态类型 `std::exception`），而并非重新抛出原来的 `std::runtime_error` 类型的异常。（但请关注[请勿试图在每个函数中捕获所有的异常](#Re-not-always)，以及[尽可能减少 `try`/`catch` 的显式使用](#Re-catch)。)
+重新抛出已捕获的异常应当使用 `throw;` 而非 `throw e;`。使用 `throw e;` 将会抛出 `e` 的一个新副本（并于异常被 `catch (const std::exception& e)` 捕获时切片成静态类型 `std::exception`），而并非重新抛出原来的 `std::runtime_error` 类型的异常。（但请关注[请勿试图在每个函数中捕获所有的异常](#Re-not-always)，以及[尽可能减少 `try`/`catch` 的显式使用](#Re-catch)。)
 
 ##### 强制实施
 
@@ -16908,7 +17069,7 @@ C++20 已经将“概念”标准化了，不过是在 GCC 6.1 中以一种略�
 
 其他模板规则概览：
 
-* [T.140: 对所有的可能会被重用的操作命名](#Rt-name)
+* [T.140: 若操作可被重用，则应为其命名](#Rt-name)
 * [T.141: 当仅在一个地方需要一个简单的函数对象时，使用无名的 lambda](#Rt-lambda)
 * [T.142: 使用模板变量以简化写法](#Rt-var)
 * [T.143: 请勿编写并非有意非泛型的代码](#Rt-nongeneric)
@@ -17438,7 +17599,7 @@ C++20 已经将“概念”标准化了，不过是在 GCC 6.1 中以一种略�
     bool operator<(const Convenient&, const Convenient&);
     // ... 其他比较运算符 ...
 
-    Minimal operator+(const Convenient&, const Convenient&);
+    Convenient operator+(const Convenient&, const Convenient&);
     // ... 其他算术运算符 ...
 
     void f(const Convenient& x, const Convenient& y)
@@ -18252,7 +18413,7 @@ Lambda 会生成函数对象。
     template<class Iter>
     Out copy(Iter first, Iter last, Iter out)
     {
-        return copy_helper(first, last, out, typename copy_trait<Iter>::tag{})
+        return copy_helper(first, last, out, typename copy_trait<Value_type<Iter>>::tag{})
     }
 
     void use(vector<int>& vi, vector<int>& vi2, vector<string>& vs, vector<string>& vs2)
@@ -18268,7 +18429,7 @@ Lambda 会生成函数对象。
 当可以广泛使用 `concept` 之后，这样的替代实现就可以直接进行区分了：
 
     template<class Iter>
-        requires Pod<Value_type<iter>>
+        requires Pod<Value_type<Iter>>
     Out copy_helper(In, first, In last, Out out)
     {
         // 使用 memmove
@@ -18764,90 +18925,13 @@ C++ 是不支持这样做的。
 
 ## <a name="SS-temp-other"></a>其他模板规则
 
-### <a name="Rt-name"></a>T.140: 对所有的可能会被重用的操作命名
+### <a name="Rt-name"></a>T.140: 若操作可被重用，则应为其命名
 
-##### 理由
-
-文档，可读性，重用机会。
-
-##### 示例
-
-    struct Rec {
-        string name;
-        string addr;
-        int id;         // 唯一标识符
-    };
-
-    bool same(const Rec& a, const Rec& b)
-    {
-        return a.id == b.id;
-    }
-
-    vector<Rec*> find_id(const string& name);    // 寻找“name”的所有记录
-
-    auto x = find_if(vr.begin(), vr.end(),
-        [&](Rec& r) {
-            if (r.name.size() != n.size()) return false; // 要比较的名字都在 n 里
-            for (int i = 0; i < r.name.size(); ++i)
-                if (tolower(r.name[i]) != tolower(n[i])) return false;
-            return true;
-        }
-    );
-
-这里蕴含着一个有用的函数（大小写无关的字符串比较），因为它通常会导致 lambda 参数变大。
-
-    bool compare_insensitive(const string& a, const string& b)
-    {
-        if (a.size() != b.size()) return false;
-        for (int i = 0; i < a.size(); ++i) if (tolower(a[i]) != tolower(b[i])) return false;
-        return true;
-    }
-
-    auto x = find_if(vr.begin(), vr.end(),
-        [&](Rec& r) { compare_insensitive(r.name, n); }
-    );
-
-或者也可以这样（如果你更希望避免对 n 进行隐式的名字绑定的话）：
-
-    auto cmp_to_n = [&n](const string& a) { return compare_insensitive(a, n); };
-
-    auto x = find_if(vr.begin(), vr.end(),
-        [](const Rec& r) { return cmp_to_n(r.name); }
-    );
-
-##### 注解
-
-无论是函数，lambda，还是运算符。
-
-##### 例外
-
-* Lambda 逻辑上仅在局部作用域中使用，比如作为 `for_each` 和类似的控制流算法的参数等。
-* Lambda 用作[初始化式](#???)
-
-##### 强制实施
-
-* 【困难】 标记出相似的 lambda。
-* ???
+参见 [F.10](#Rf-name)
 
 ### <a name="Rt-lambda"></a>T.141: 当仅在一个地方需要一个简单的函数对象时，使用无名的 lambda
 
-##### 理由
-
-这样能够使代码精简并比其他方式提供更好的局部性。
-
-##### 示例
-
-    auto earlyUsersEnd = std::remove_if(users.begin(), users.end(),
-                                        [](const User &a) { return a.id > 100; });
-
-
-##### 例外
-
-为 lambda 命名是有用的，即便它可能只会一次性使用也是如此。
-
-##### 强制实施
-
-* 寻找相同和几乎相同的 lambda（以便将它们替换为具名的函数或者具名的 lambda）。
+参见 [F.11](#Rf-lambda)
 
 ### <a name="Rt-var"></a>T.142?: 使用模板变量以简化写法
 
@@ -19067,13 +19151,13 @@ C++ 比 C 的表达能力更强，而且为许多种类的编程都提供了更�
 源文件规则概览：
 
 * [SF.1: 如果你的项目还未采用别的约定的话，应当为代码文件使用后缀 `.cpp`，而对接口文件使用后缀 `.h`](#Rs-file-suffix)
-* [SF.2: `.h` 文件不能含有对象定义或非内联的函数定义](#Rs-inline)
-* [SF.3: 对在多个源文件中使用的任何声明，都应使用 `.h` 文件](#Rs-declaration-header)
-* [SF.4: 在文件中的其他所有声明之前包含 `.h` 文件](#Rs-include-order)
-* [SF.5: `.cpp` 文件必须包含定义了它的接口的一个或多个 `.h` 文件](#Rs-consistency)
+* [SF.2: 头文件不能含有对象定义或非内联的函数定义](#Rs-inline)
+* [SF.3: 对在多个源文件中使用的任何声明，都应使用头文件](#Rs-declaration-header)
+* [SF.4: 在文件中的其他所有声明之前包含头文件](#Rs-include-order)
+* [SF.5: `.cpp` 文件必须包含定义了它的接口的一个或多个头文件](#Rs-consistency)
 * [SF.6: `using namespace` 指令，（仅）可以为迁移而使用，可以为基础程序库使用（比如 `std`），或者在局部作用域中使用](#Rs-using)
 * [SF.7: 请勿在头文件中的全局作用域使用 `using namespace` 指令](#Rs-using-directive)
-* [SF.8: 为所有的 `.h` 文件使用 `#include` 防卫宏](#Rs-guards)
+* [SF.8: 为所有的头文件使用 `#include` 防卫宏](#Rs-guards)
 * [SF.9: 避免源文件的循环依赖](#Rs-cycles)
 * [SF.10: 避免依赖于隐含地 `#include` 进来的名字](#Rs-implicit)
 * [SF.11: 头文件应当是自包含的](#Rs-contained)
@@ -19085,52 +19169,9 @@ C++ 比 C 的表达能力更强，而且为许多种类的编程都提供了更�
 
 ### <a name="Rs-file-suffix"></a>SF.1: 如果你的项目还未采用别的约定的话，应当为代码文件使用后缀 `.cpp`，而对接口文件使用后缀 `.h`
 
-##### 理由
+参见 [NL.27](#Rl-file-suffix)
 
-这是一条历史悠久的约定。
-不过一致性更加重要，因此如果你的项目用了别的约定的话，应当遵守它。
-
-##### 注解
-
-这项约定反应了一种常见使用模式：
-头文件更容易和 C 语言共享使用，并可以作为 C++ 和 C 编译，它们通常用 `.h` 后缀，
-并且对于有意要和 C 共用的头文件来说，让所有头文件都使用 `.h` 而不是别的扩展名要更加容易。
-另一方面，实现文件则很少会和 C 共用，通常应当和 `.c` 文件相区别，
-因此一般最好为所有的 C++ 实现文件用别的扩展名（如 `.cpp`）来命名。
-
-特定的名字 `.h` 和 `.cpp` 并不是必要的（只是作为缺省建议），其他的名字也被广泛采用。
-例子包括 `.hh`，`.C`，和 `.cxx` 等。请以类似方式使用这些名字。
-本文档中我们把 `.h` 和 `.cpp` 作为头文件和实现文件的简便提法，
-虽然实际上的扩展名可能是不同的。
-
-也许你的 IDE（如果你使用的话）对后缀有较强的倾向。
-
-##### 示例
-
-    // foo.h:
-    extern int a;   // 声明
-    extern void foo();
-
-    // foo.cpp:
-    int a;   // 定义
-    void foo() { ++a; }
-
-`foo.h` 提供了 `foo.cpp` 的接口。最好避免全局变量。
-
-##### 示例，不好
-
-    // foo.h:
-    int a;   // 定义
-    void foo() { ++a; }
-
-一个程序中两次 `#include <foo.h>` 将导致因为对唯一定义规则的两次违反而出现一个连接错误。
-
-##### 强制实施
-
-* 对不符合约定的文件名进行标记。
-* 检查 `.h` 和 `.cpp`（或等价文件）遵循下列各规则。
-
-### <a name="Rs-inline"></a>SF.2: `.h` 文件不能含有对象定义或非内联的函数定义
+### <a name="Rs-inline"></a>SF.2: 头文件不能含有对象定义或非内联的函数定义
 
 ##### 理由
 
@@ -19154,9 +19195,9 @@ C++ 比 C 的表达能力更强，而且为许多种类的编程都提供了更�
 
 当连接 `file1.cpp` 和 `file2.cpp` 时将出现两个连接器错误。
 
-**其他形式**: `.h` 文件必须仅包含：
+**其他形式**: 头文件必须仅包含：
 
-* `#include` 其他的 `.h` 文件（可能包括包含防卫宏）
+* `#include` 其他的头文件（可能包括包含防卫宏）
 * 模板
 * 类定义
 * 函数声明
@@ -19171,7 +19212,7 @@ C++ 比 C 的表达能力更强，而且为许多种类的编程都提供了更�
 
 根据以上白名单来检查。
 
-### <a name="Rs-declaration-header"></a>SF.3: 对在多个源文件中使用的任何声明，都应使用 `.h` 文件
+### <a name="Rs-declaration-header"></a>SF.3: 对在多个源文件中使用的任何声明，都应使用头文件
 
 ##### 理由
 
@@ -19193,7 +19234,7 @@ C++ 比 C 的表达能力更强，而且为许多种类的编程都提供了更�
 
 * 对并未放入 `.h` 而在其他源文件中的实体声明进行标记。
 
-### <a name="Rs-include-order"></a>SF.4: 在文件中的其他所有声明之前包含 `.h` 文件
+### <a name="Rs-include-order"></a>SF.4: 在文件中的其他所有声明之前包含头文件
 
 ##### 理由
 
@@ -19239,7 +19280,7 @@ C++ 比 C 的表达能力更强，而且为许多种类的编程都提供了更�
 
 容易。
 
-### <a name="Rs-consistency"></a>SF.5: `.cpp` 文件必须包含定义了它的接口的一个或多个 `.h` 文件
+### <a name="Rs-consistency"></a>SF.5: `.cpp` 文件必须包含定义了它的接口的一个或多个头文件
 
 ##### 理由
 
@@ -19267,7 +19308,7 @@ C++ 比 C 的表达能力更强，而且为许多种类的编程都提供了更�
     int foobar(int);
 
     // foo.cpp:
-    #include <foo.h>
+    #include "foo.h"
 
     void foo(int) { /* ... */ }
     int bar(double) { /* ... */ }
@@ -19367,7 +19408,7 @@ C++ 比 C 的表达能力更强，而且为许多种类的编程都提供了更�
 
 标记头文件的全局作用域中的 `using namespace`。
 
-### <a name="Rs-guards"></a>SF.8: 为所有的 `.h` 文件使用 `#include` 防卫宏
+### <a name="Rs-guards"></a>SF.8: 为所有的头文件使用 `#include` 防卫宏
 
 ##### 理由
 
@@ -20430,7 +20471,7 @@ C 标准库规则概览：
 * [NR.1: 请勿坚持认为声明都应当放在函数的最上面](#Rnr-top)
 * [NR.2: 请勿坚持使函数中只保留一个 `return` 语句](#Rnr-single-return)
 * [NR.3: 请勿避免使用异常](#Rnr-no-exceptions)
-* [NR.4: 请勿坚持把每个类声明放在其自己的源文件中](#Rnr-lots-of-files)
+* [NR.4: 请勿坚持把每个类定义放在其自己的源文件中](#Rnr-lots-of-files)
 * [NR.5: 请勿采用两阶段初始化](#Rnr-two-phase-init)
 * [NR.6: 请勿把所有清理操作放在函数末尾并使用 `goto exit`](#Rnr-goto-exit)
 * [NR.7: 请勿使所有数据成员 `protected`](#Rnr-protected-data)
@@ -20618,7 +20659,7 @@ C 标准库规则概览：
 * [RAII](#Re-raii)
 * 契约/断言：使用 GSL 的 `Expects` 和 `Ensures`（直到对契约的语言支持可以使用）
 
-### <a name="Rnr-lots-of-files"></a>NR.4: 请勿坚持把每个类声明放在其自己的源文件中
+### <a name="Rnr-lots-of-files"></a>NR.4: 请勿坚持把每个类定义放在其自己的源文件中
 
 ##### 理由
 
@@ -20852,7 +20893,7 @@ C 标准库规则概览：
   ???.
 * [Possibility.com: C++ Coding Standard](http://www.possibility.com/Cpp/CppCodingStandard.html).
   ???.
-* [SEI CERT: Secure C++ Coding Standard](https://www.securecoding.cert.org/confluence/pages/viewpage.action?pageId=637).
+* [SEI CERT: Secure C++ Coding Standard](https://wiki.sei.cmu.edu/confluence/x/Wnw-BQ).
   针对安全关键代码所编写的一组非常好的规则（还带有示例和原理说明）。
   它们的许多规则都广泛适用。
 * [High Integrity C++ Coding Standard](http://www.codingstandard.com/).
@@ -20896,7 +20937,7 @@ C 标准库规则概览：
 * [Bjarne Stroustrup 的个人主页](http://www.stroustrup.com)
 * [WG21](http://www.open-std.org/jtc1/sc22/wg21/)
 * [Boost](http://www.boost.org)<a name="Boost"></a>
-* [Adobe open source](http://www.adobe.com/open-source.html)
+* [Adobe open source](https://opensource.adobe.com/)
 * [Poco libraries](http://pocoproject.org/)
 * Sutter's Mill?
 * ???
@@ -21046,7 +21087,7 @@ CppCon 的展示的幻灯片是可以获得的（其链接，还有上传的视�
 [坚持进行初始化](#Res-always)，
 可以采用[默认构造函数](#Rc-default0)或者
 [默认成员初始化式](#Rc-in-class-initializer)。
-* <a name="Pro-type-unon"></a>Type.7: 避免裸 union：
+* <a name="Pro-type-union"></a>Type.7: 避免裸 union：
 [代之以使用 `variant`](#Ru-naked)。
 * <a name="Pro-type-varargs"></a>Type.8: 避免 varargs：
 [不要使用 `va_arg` 参数](#F-varargs)。
@@ -21287,6 +21328,7 @@ IDE 和工具可以提供辅助（当然也可能造成妨碍）。
 * [NL.21: 每个声明式（仅）声明一个名字](#Rl-dcl)
 * [NL.25: 请勿将 `void` 用作参数类型](#Rl-void)
 * [NL.26: 采用符合惯例的 `const` 写法](#Rl-const)
+* [NL.27: 为代码文件使用后缀 `.cpp`，而对接口文件使用后缀 `.h`](#Rl-file-suffix)
 
 这些问题的大部分都是审美问题，程序员都有很强的个人倾向。
 IDE 也都会提供某些默认方案和一组替代方案。
@@ -21898,6 +21940,53 @@ C 风格的布局强调其在表达式中的用法和文法，而 C++ 风格强�
 ##### 强制实施
 
 标记用作类型的后缀的 `const`。
+
+### <a name="Rl-file-suffix"></a>NL.27: 为代码文件使用后缀 `.cpp`，而对接口文件使用后缀 `.h`
+
+##### 理由
+
+这是一条历史悠久的约定。
+不过一致性更加重要，因此如果你的项目用了别的约定的话，应当遵守它。
+
+##### 注解
+
+这项约定反应了一种常见使用模式：
+头文件更容易和 C 语言共享使用，并可以作为 C++ 和 C 编译，它们通常用 `.h` 后缀，
+并且对于有意要和 C 共用的头文件来说，让所有头文件都使用 `.h` 而不是别的扩展名要更加容易。
+另一方面，实现文件则很少会和 C 共用，通常应当和 `.c` 文件相区别，
+因此一般最好为所有的 C++ 实现文件用别的扩展名（如 `.cpp`）来命名。
+
+特定的名字 `.h` 和 `.cpp` 并不是必要的（只是作为缺省建议），其他的名字也被广泛采用。
+例子包括 `.hh`，`.C`，和 `.cxx` 等。请以类似方式使用这些名字。
+本文档中我们把 `.h` 和 `.cpp` 作为头文件和实现文件的简便提法，
+虽然实际上的扩展名可能是不同的。
+
+也许你的 IDE（如果你使用的话）对后缀有较强的倾向。
+
+##### 示例
+
+    // foo.h:
+    extern int a;   // 声明
+    extern void foo();
+
+    // foo.cpp:
+    int a;   // 定义
+    void foo() { ++a; }
+
+`foo.h` 提供了 `foo.cpp` 的接口。最好避免全局变量。
+
+##### 示例，不好
+
+    // foo.h:
+    int a;   // 定义
+    void foo() { ++a; }
+
+一个程序中两次 `#include <foo.h>` 将导致因为对唯一定义规则的两次违反而出现一个连接错误。
+
+##### 强制实施
+
+* 对不符合约定的文件名进行标记。
+* 检查 `.h` 和 `.cpp`（或等价文件）遵循下列各规则。
 
 # <a name="S-faq"></a>FAQ: 常见问题及其回答
 
