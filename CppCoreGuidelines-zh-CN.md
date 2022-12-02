@@ -9218,7 +9218,7 @@ C++17 引入了一个独立类型 `std::byte` 以支持在原始对象表示上�
 
 ##### 注解
 
-枚举前向声明中是有必要指定底层类型的：
+对`enum`或`enum class`前向声明时有必要指定底层类型：
 
     enum Flags : char;
 
@@ -9228,6 +9228,9 @@ C++17 引入了一个独立类型 `std::byte` 以支持在原始对象表示上�
 
     enum Flags : char { /* ... */ };
 
+或者用以确保该类型的值具有指定的位精度：
+
+    enum Bitboard : uint64_t { /* ... */ };
 
 ##### 强制实施
 
@@ -9789,19 +9792,17 @@ C 风格的字符串是以单个指向以零结尾的字符序列的指针来传
 
     void f()
     {
-        X x;
-        X* p1 { new X };              // 参见 ???
-        unique_ptr<X> p2 { new X };   // 唯一所有权；参见 ???
-        shared_ptr<X> p3 { new X };   // 共享所有权；参见 ???
-        auto p4 = make_unique<X>();   // 唯一所有权，比显式使用“new”要好
-        auto p5 = make_shared<X>();   // 共享所有权，比显式使用“new”要好
+        X* p1 { new X };              // 不好，p1 会泄漏
+        auto p4 = make_unique<X>();   // 好，唯一所有权
+        auto p5 = make_shared<X>();   // 好，共享所有权
     }
 
 这里（只有）初始化 `p1` 的对象将会泄漏。
 
 ##### 强制实施
 
-【简单】 如果 `new` 的返回值或者指针类型的函数调用返回值被赋值给了原生指针，就给出警告。
+【简单】 如果 `new` 的返回值被赋值给了原生指针，就给出警告。
+【简单】 如果返回带所有权原始指针的函数的结果被赋值给了原生指针，就给出警告。
 
 ### <a name="Rr-unique"></a>R.21: 优先采用 `unique_ptr` 而不是 `shared_ptr`，除非需要共享所有权
 
@@ -10273,7 +10274,7 @@ ISO C++ 标准库是最广为了解而且经过最好测试的程序库之一。
             is.read(s, maxstring);
             res[elemcount++] = s;
         }
-        nread = &elemcount;
+        *nread = elemcount;
         return res;
     }
 
@@ -13892,7 +13893,7 @@ href="#Rper-Knuth">Per.2</a>。）
 它们隐含地依赖于元素类型定义了小于（`<`）运算符。
 为使接口完整，我们需要另一个接受比较准则的版本：
 
-    // 用 p 比较 c 的元素
+    // 用 r 比较 c 的元素
     template<random_access_range R, class C> requires sortable<R, C>
     void sort(R&& r, C c);
 
@@ -13975,7 +13976,7 @@ href="#Rper-Knuth">Per.2</a>。）
 ##### 注解
 
 对效率的需求并不意味着对[底层代码](#Rper-low)的需求。
-高层代码并不意味着缓慢或膨胀。
+高层代码并不必然缓慢或膨胀。
 
 ##### 注解
 
@@ -20363,7 +20364,7 @@ C11 定义了一些“可选扩展”，它们对其实参进行一些额外检�
 对于字符串流（指 `ostringstream`），插入一个 `endl` 完全等价于
 插入一个 `'\n'` 字符，但正是这种情况下，`endl` 可能会明显比较慢。
 
-`endl` *并不*关注产生平台专有的行结尾序列（比如 Windows 上的 "\r\n"）。
+`endl` *并不*关注产生平台专有的行结尾序列（比如 Windows 上的 `"\r\n"`）。
 因此，字符串流的 `s << endl` 只会插入*单个* `'\n'` 字符。
 
 ##### 注解
@@ -20388,7 +20389,7 @@ C11 定义了一些“可选扩展”，它们对其实参进行一些额外检�
 
 C 标准库规则概览：
 
-* [S.C.1: 请勿使用 setjmp/longjmp](#Rclib-jmp)
+* [SL.C.1: 请勿使用 setjmp/longjmp](#Rclib-jmp)
 * [???](#???)
 * [???](#???)
 
