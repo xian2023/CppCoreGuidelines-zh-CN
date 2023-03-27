@@ -46,7 +46,7 @@
 * [T: 模板和泛型编程](#S-templates)
 * [CPL: C 风格的编程](#S-cpl)
 * [SF: 源文件](#S-source)
-* [SL: 标准库](#S-stdlib)
+* [SL: 标准库](#sl-the-standard-library)
 
 配套章节：
 
@@ -54,7 +54,7 @@
 * [NR: 伪规则和错误的看法](#S-not)
 * [RF: 参考资料](#S-references)
 * [PRO: 剖面配置](#S-profile)
-* [GSL: 指导方针支持库](#S-gsl)
+* [GSL: 指导方针支持库](#gsl-guidelines-support-library)
 * [NL: 命名和代码布局建议](#S-naming)
 * [FAQ: 常见问题的解答](#S-faq)
 * [附录 A: 程序库](#S-libraries)
@@ -258,7 +258,7 @@
 
 这些指导方针都是遵循“超集的子集”原则（[Stroustrup05](#Stroustrup05)）而设计的。
 它们并非仅仅定义了 C++ 的一个可以使用的子集（以获得比如说可靠性，安全性，性能，或者别的什么）。
-它们强烈地推崇使用一些简单的“扩展”（[程序库组件](#S-gsl)），
+它们强烈地推崇使用一些简单的“扩展”（[程序库组件](#gsl-guidelines-support-library)），
 使得最易出错的 C++ 特性变得不再必须，并且可以（通过这些规则）禁止再使用它们。
 
 这些规则都强调静态类型安全性和资源安全性。
@@ -439,7 +439,7 @@
 * [T: 模板和泛型编程](#S-templates)
 * [CPL: C 风格的编程](#S-cpl)
 * [SF: 源文件](#S-source)
-* [SL: 标准库](#S-stdlib)
+* [SL: 标准库](#sl-the-standard-library)
 
 配套章节：
 
@@ -447,7 +447,7 @@
 * [NR: 伪规则和错误的看法](#S-not)
 * [RF: 参考资料](#S-references)
 * [Pro: 剖面配置](#S-profile)
-* [GSL: 指导方针支持库](#S-gsl)
+* [GSL: 指导方针支持库](#gsl-guidelines-support-library)
 * [NL: 命名和代码布局建议](#S-naming)
 * [FAQ: 常见问题的解答](#S-faq)
 * [附录 A: 程序库](#S-libraries)
@@ -541,7 +541,7 @@
 
 C++ 程序员应当熟知标准库的基本知识，并在适当的时候加以利用。
 任何程序员都应当熟知其所工作的项目中的基础程序库的基本知识，并适当加以利用。
-使用本文档的指导方针的程序员，应当熟知[指导方针支持库](#S-gsl)，并适当加以利用。
+使用本文档的指导方针的程序员，应当熟知[指导方针支持库](#gsl-guidelines-support-library)，并适当加以利用。
 
 ##### 示例
 
@@ -632,8 +632,8 @@ C++ 程序员应当熟知标准库的基本知识，并在适当的时候加以�
 
 程序员应当熟悉：
 
-* [指导方针支持库](#S-gsl)
-* [ISO C++ 标准库](#S-stdlib)
+* [指导方针支持库](#gsl-guidelines-support-library)
+* [ISO C++ 标准库](#sl-the-standard-library)
 * 当前项目所使用的任何基础程序库
 
 ##### 注解
@@ -1010,7 +1010,7 @@ C++ 程序员应当熟知标准库的基本知识，并在适当的时候加以�
 
 * 查找指针：把它们分成非所有者（默认情形）和所有者。
   如果可行的话，把所有者替换为标准库的资源封装类（如上例所示）。
-  或者，也可以把这种所有者用 [GSL](#S-gsl) 中的 `owner` 进行标记。
+  或者，也可以把这种所有者用 [GSL](#gsl-guidelines-support-library) 中的 `owner` 进行标记。
 * 查找裸露的 `new` 和 `delete`
 * 查找已知的返回原始指针的资源分配函数（诸如 `fopen`，`malloc`，和 `strdup` 等）
 
@@ -1204,8 +1204,8 @@ C++ 程序员应当熟知标准库的基本知识，并在适当的时候加以�
 
 默认应当优先使用
 
-* [ISO C++ 标准库](#S-stdlib)
-* [指导方针支持库](#S-gsl)
+* [ISO C++ 标准库](#sl-the-standard-library)
+* [指导方针支持库](#gsl-guidelines-support-library)
 
 ##### 注解
 
@@ -1277,7 +1277,7 @@ C++ 程序员应当熟知标准库的基本知识，并在适当的时候加以�
 
 通过非局部变量（比如 `errno`）进行的报告经常被忽略。例如：
 
-    // 请勿：printf 的返回值未进行检查
+    // 请勿如此：fprintf 的返回值未进行检查
     fprintf(connection, "logging: %d %d %d\n", x, y, s);
 
 要是连接已经关闭而导致没有产生日志输出的话会怎么样？参见 I.???。
@@ -1564,7 +1564,7 @@ C++ 程序员应当熟知标准库的基本知识，并在适当的时候加以�
 
 理想情况下，这个 `Expects(x >= 0)` 应当是 `sqrt()` 的接口的一部分，但我们无法轻易做到这点。当前，我们将之放入定义式（函数体）之中。
 
-**参考**: `Expects()` 在 [GSL](#S-gsl) 中有说明。
+**参考**: `Expects()` 在 [GSL](#gsl-guidelines-support-library) 中有说明。
 
 ##### 注解
 
@@ -1872,7 +1872,7 @@ C++ 程序员应当熟知标准库的基本知识，并在适当的时候加以�
 因此，仅当需要引用语义时再使用智能指针。
 
 **替代方案**: 有时候因为 ABI 兼容性的要求或者缺少资源，是无法对老代码进行修改的。
-这种情况下，请用[指导方针支持库](#S-gsl)的 `owner` 来标记拥有对象的指针：
+这种情况下，请用[指导方针支持库](#gsl-guidelines-support-library)的 `owner` 来标记拥有对象的指针：
 
     owner<X*> compute(args)    // 现在就明确传递了所有权这一点
     {
@@ -1922,7 +1922,7 @@ C++ 程序员应当熟知标准库的基本知识，并在适当的时候加以�
 
 ##### 注解
 
-`not_null` 在[指导方针支持库](#S-gsl)中定义。
+`not_null` 在[指导方针支持库](#gsl-guidelines-support-library)中定义。
 
 ##### 注解
 
@@ -1988,7 +1988,7 @@ C++ 程序员应当熟知标准库的基本知识，并在适当的时候加以�
 ##### 例外
 
 使用 `zstring` 和 `czstring` 来表示 C 风格的以零终结字符串。
-但这样做时，应当使用 `std::string_view` 或 [GSL](#S-gsl) 中的 `span<char>` 以避免范围错误。
+但这样做时，应当使用 `std::string_view` 或 [GSL](#gsl-guidelines-support-library) 中的 `span<char>` 以避免范围错误。
 
 ##### 强制实施
 
@@ -3442,7 +3442,7 @@ C++98 的标准库已经使用这种风格了，因为 `pair` 就像一种两个
 
 **再者**: 应当假定从指向 `T` 的智能指针（比如 `unique_ptr<T>`）中获得的 `T*`是指向单个元素的。
 
-**参见**: [支持程序库](#S-gsl)
+**参见**: [支持程序库](#gsl-guidelines-support-library)
 
 **参见**: [请勿将数组作为单个指针来传递](#Ri-array)
 
@@ -3534,7 +3534,7 @@ C++98 的标准库已经使用这种风格了，因为 `pair` 就像一种两个
 
 把一个 `span` 对象作为参数传递的效率完全等同于传递一对儿指针参数或者传递一个指针和一个整数计数值。
 
-**参见**: [支持程序库](#S-gsl)
+**参见**: [支持程序库](#gsl-guidelines-support-library)
 
 ##### 强制实施
 
@@ -3567,7 +3567,7 @@ C 风格的字符串非常普遍。它们是按一种约定方式定义的：就
 
 `zstring` 不含有所有权。
 
-**参见**: [支持程序库](#S-gsl)
+**参见**: [支持程序库](#gsl-guidelines-support-library)
 
 ### <a name="Rf-unique_ptr"></a>F.26: 当需要指针时，用 `unique_ptr<T>` 来传递所有权
 
@@ -4949,15 +4949,15 @@ C++ 内建类型都是正规的，标准程序库的一些类型，如 `string`�
 为避免发生如 [C.67](#Rc-copy-virtual) 所说的切片，
 使复制和移动操作为受保护的或 `=delete`，并添加 `clone`：
 
-    class ClonableBase {
+    class CloneableBase {
     public:
-        virtual unique_ptr<ClonableBase> clone() const;
-        virtual ~ClonableBase() = default;
-        ClonableBase() = default;
-        ClonableBase(const ClonableBase&) = delete;
-        ClonableBase& operator=(const ClonableBase&) = delete;
-        ClonableBase(ClonableBase&&) = delete;
-        ClonableBase& operator=(ClonableBase&&) = delete;
+        virtual unique_ptr<CloneableBase> clone() const;
+        virtual ~CloneableBase() = default;
+        CloneableBase() = default;
+        CloneableBase(const CloneableBase&) = delete;
+        CloneableBase& operator=(const CloneableBase&) = delete;
+        CloneableBase(CloneableBase&&) = delete;
+        CloneableBase& operator=(CloneableBase&&) = delete;
         // ... 其他构造函数和函数 ...
     };
 
@@ -5607,7 +5607,7 @@ C++11 的初始化式列表规则免除了对许多构造函数的需求。例�
     };
 
     vector<Date> vd1(1000);   // 需要默认的 Date
-    vector<Date> vd2(1000, Date{Month::October, 7, 1885});   // 替代方式
+    vector<Date> vd2(1000, Date{7, Month::October, 1885});   // 替代方式
 
 仅当没有用户声明的构造函数时，默认构造函数才会自动生成，因此上面的例子中的 vector `vdl` 是无法进行初始化的。
 缺乏默认值会导致用户感觉奇怪，并且使其使用变复杂，因此如果可以合理定义的话就应当定义默认值。
@@ -12428,7 +12428,7 @@ C 风格的强制转换很危险，因为它可以进行任何种类的转换，
 
 * 对于 `std::move(x)` 的使用，当 `x` 是右值，或者语言已经将其当做右值，这包括 `return std::move(local_variable);` 以及在按值返回的函数上的 `std::move(f())`，进行标记
 * 当没有接受 `const S&` 的函数重载来处理左值时，对接受 `S&&` 参数的函数进行标记。
-* 当将经过 `std::move` 的实参传递给某个形参时进行标记，除非形参的类型为右值引用 `X&&`，或者类型是只能移动的而该形参为按值传递。
+* 若实参经过 `std::move` 传递给形参则进行标记，除非形参的类型为右值引用 `X&&`，或者类型是只能移动的而该形参为按值传递。
 * 当对转发引用（`T&&` 其中 `T` 为模板参数类型）使用 `std::move` 时进行标记。应当代之以使用 `std::forward`。
 * 当对并非非 const 右值引用的变量使用 `std::move` 时进行标记。（这是前一条规则的更一般的情况，以覆盖非转发的情况。）
 * 当对右值引用（`X&&` 其中 `X` 为非模板形参类型）使用 `std::forward` 时进行标记。应当代之以使用 `std::move`。
@@ -13234,11 +13234,11 @@ C 风格的强制转换很危险，因为它可以进行任何种类的转换，
 
     void f()
     {
-        lock<mutex>{mx};   // 不好
+        lock_guard<mutex>{mx};   // 不好
         // ...
     }
 
-这里声明了一个无名的 `lock` 对象，它将在分号处立刻离开作用域。
+这里声明了一个无名的 `lock_guard` 对象，它将在分号处立刻离开作用域。
 这并不是一种少见的错误。
 特别是，这个特别的例子会导致很难发觉的竞争条件。
 
@@ -13952,7 +13952,7 @@ href="#Rper-Knuth">Per.2</a>。）
 * 程序库：
 使用带有良好接口的程序库。
 当没有可用的程序库时，就构建自己的，并模仿一个好程序库的接口风格。
-[标准库](#S-stdlib)是寻找模仿的一个好的第一来源。
+[标准库](#sl-the-standard-library)是寻找模仿的一个好的第一来源。
 * 隔离：
 通过将你所选择的接口提供给你的代码来将其和杂乱和老旧风格的代码之间进行隔离。
 这有时候称为为有用或必须但杂乱的代码“提供包装”。
@@ -16423,7 +16423,7 @@ RAII（Resource Acquisition Is Initialization，资源获取即初始化）是�
 
 ##### 理由
 
-[GSL](#S-gsl) 提供的 `finally` 要比 `try`/`catch` 更不啰嗦且难于搞错。
+[GSL](#gsl-guidelines-support-library) 提供的 `finally` 要比 `try`/`catch` 更不啰嗦且难于搞错。
 
 ##### 示例
 
@@ -17416,7 +17416,7 @@ C++20 已经将“概念”标准化了，不过是在 GCC 6.1 中以一种略�
 
 ##### 理由
 
-“标准”概念（即由 [GSL](#S-gsl) 和 ISO 标准自身所提供的概念)，
+“标准”概念（即由 [GSL](#gsl-guidelines-support-library) 和 ISO 标准自身所提供的概念)，
 避免了我们思考自己的概念，它们比我们匆忙中能够想出来的要好得多，而且还提升了互操作性。
 
 ##### 注解
@@ -20808,7 +20808,7 @@ C 标准库规则概览：
     };
 
     Picture picture1(100, 100);
-    // picture 已就绪可用……
+    // picture1 已就绪可用……
 
     // y 并非有效大小值，
     // 缺省的契约违规行为将会调用 std::terminate
