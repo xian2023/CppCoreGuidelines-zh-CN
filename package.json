@@ -1,0 +1,10 @@
+{
+  "name": "CppCoreGuidelines-zh-CN",
+  "version": "1.0.0",
+  "description": "CppCoreGuidelines-zh-CN",
+  "scripts": {},
+  "dependencies": {},
+  "devDependencies": {
+    "markdown-it": "^12.3.1"
+  }
+}
